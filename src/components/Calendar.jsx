@@ -29,6 +29,81 @@ function formatTimeLabel(totalMinutes) {
   return `${hour12}:${minutes.toString().padStart(2, '0')}${period}`
 }
 
+// Given a list of meetings for a single day, compute side-by-side columns for overlapping groups
+function layoutMeetingsForDay(dayMeetings) {
+  if (!dayMeetings || dayMeetings.length === 0) return []
+
+  // Sort by start time, then by duration (longer first helps stable layout)
+  const sorted = [...dayMeetings].sort((a, b) => {
+    if (a.startMinutes !== b.startMinutes) return a.startMinutes - b.startMinutes
+    return (b.endMinutes - b.startMinutes) - (a.endMinutes - a.startMinutes)
+  })
+
+  const laidOut = []
+
+  let clumpStartIdx = 0
+  let clumpMaxEnd = sorted[0].endMinutes
+
+  // Helper to assign columns within [startIdx, endIdx] inclusive slice
+  function assignColumnsForClump(startIdx, endIdx) {
+    const clump = sorted.slice(startIdx, endIdx + 1)
+
+    // Active columns: track end time for each column
+    const columnEndTimes = [] // index => last endMinutes
+    const eventColumnIndex = new Map()
+    let maxConcurrent = 0
+
+    for (const evt of clump) {
+      // Find first free column where previous event has ended
+      let placedColumn = -1
+      for (let i = 0; i < columnEndTimes.length; i++) {
+        if (evt.startMinutes >= columnEndTimes[i]) {
+          placedColumn = i
+          break
+        }
+      }
+      if (placedColumn === -1) {
+        placedColumn = columnEndTimes.length
+        columnEndTimes.push(evt.endMinutes)
+      } else {
+        columnEndTimes[placedColumn] = evt.endMinutes
+      }
+      eventColumnIndex.set(evt, placedColumn)
+      maxConcurrent = Math.max(maxConcurrent, columnEndTimes.length)
+    }
+
+    // Push with layout info
+    for (const evt of clump) {
+      laidOut.push({
+        ...evt,
+        __layout: {
+          columnIndex: eventColumnIndex.get(evt) || 0,
+          columnCount: maxConcurrent || 1,
+        },
+      })
+    }
+  }
+
+  // Build clumps connected by overlap chains
+  for (let i = 1; i < sorted.length; i++) {
+    const evt = sorted[i]
+    if (evt.startMinutes < clumpMaxEnd) {
+      // still in clump
+      clumpMaxEnd = Math.max(clumpMaxEnd, evt.endMinutes)
+    } else {
+      // close previous clump
+      assignColumnsForClump(clumpStartIdx, i - 1)
+      // start new clump
+      clumpStartIdx = i
+      clumpMaxEnd = evt.endMinutes
+    }
+  }
+  // Close last clump
+  assignColumnsForClump(clumpStartIdx, sorted.length - 1)
+
+  return laidOut
+}
+
 export default function Calendar({ meetings = [] }) {
   const slots = generateTimeSlots()
 
@@ -61,28 +136,33 @@ export default function Calendar({ meetings = [] }) {
           </div>
 
           {/* Day columns */}
-          {days.map((d, dayIndex) => (
-            <div key={d.key} className="relative">
-              {/* Slot lines */}
-              {slots.map((m) => (
-                <div key={m} className="border-b border-slate-100" style={{ height: `${slotHeightPx}px` }} />
-              ))}
+          {days.map((d, dayIndex) => {
+            const dayMeetings = meetings.filter((mtg) => mtg.dayIndex === dayIndex)
+            const laidOut = layoutMeetingsForDay(dayMeetings)
 
-              {/* Meetings for this day */}
-              <div className="absolute inset-x-0 top-0" style={{ height: `${((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx}px` }}>
-                {meetings
-                  .filter((mtg) => mtg.dayIndex === dayIndex)
-                  .map((mtg) => (
+            return (
+              <div key={d.key} className="relative">
+                {/* Slot lines */}
+                {slots.map((m) => (
+                  <div key={m} className="border-b border-slate-100" style={{ height: `${slotHeightPx}px` }} />
+                ))}
+
+                {/* Meetings for this day */}
+                <div className="absolute inset-x-0 top-0" style={{ height: `${((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx}px` }}>
+                  {laidOut.map((mtg) => (
                     <MeetingBlock
                       key={mtg.id}
                       meeting={mtg}
                       slotHeightPx={slotHeightPx}
                       dayStartMinutes={startTimeMinutes}
+                      columnIndex={mtg.__layout?.columnIndex || 0}
+                      columnCount={mtg.__layout?.columnCount || 1}
                     />
                   ))}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>

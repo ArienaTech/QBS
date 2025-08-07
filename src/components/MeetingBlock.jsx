@@ -5,16 +5,22 @@ const typeToColor = {
   Default: 'bg-slate-500/90 hover:bg-slate-500',
 }
 
-export default function MeetingBlock({ meeting, slotHeightPx, dayStartMinutes }) {
+export default function MeetingBlock({ meeting, slotHeightPx, dayStartMinutes, columnIndex = 0, columnCount = 1 }) {
   const top = ((meeting.startMinutes - dayStartMinutes) / 30) * slotHeightPx
   const height = ((meeting.endMinutes - meeting.startMinutes) / 30) * slotHeightPx
 
   const color = typeToColor[meeting.type] || typeToColor.Default
 
+  // Side-by-side layout: compute percentage width and left offset with small gap
+  const gapPct = 2 // percent gap between columns
+  const totalGapPct = gapPct * (columnCount - 1)
+  const widthPct = columnCount > 0 ? (100 - totalGapPct) / columnCount : 100
+  const leftPct = columnIndex * (widthPct + gapPct)
+
   return (
     <div
-      className={`${color} absolute left-1 right-1 rounded-md shadow-sm text-white p-2.5 transition-colors`}
-      style={{ top: `${top}px`, height: `${height}px` }}
+      className={`${color} absolute rounded-md shadow-sm text-white p-2.5 transition-colors`}
+      style={{ top: `${top}px`, height: `${height}px`, left: `${leftPct}%`, width: `${widthPct}%` }}
     >
       <div className="text-[11px] font-medium opacity-90">
         {format12Hour(meeting.startMinutes)} – {format12Hour(meeting.endMinutes)}
