@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import TopBar from './components/TopBar.jsx'
 import Calendar from './components/Calendar.jsx'
@@ -8,6 +8,26 @@ export default function App() {
   const [meetings, setMeetings] = useState([])
   const [showAdd, setShowAdd] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  // Initialize collapsed state from localStorage or screen width
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sidebarCollapsed')
+      if (saved !== null) {
+        setSidebarCollapsed(saved === 'true')
+        return
+      }
+      const prefersCollapsed = window.matchMedia('(max-width: 1024px)').matches
+      setSidebarCollapsed(prefersCollapsed)
+    } catch {}
+  }, [])
+
+  // Persist collapsed state
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed))
+    } catch {}
+  }, [sidebarCollapsed])
 
   function handleAddMeetingClick() {
     setShowAdd(true)
