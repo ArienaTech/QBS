@@ -24,7 +24,7 @@ export default function TopBar({ onAddMeeting, user }) {
             <input
               type="search"
               placeholder="Search matters or meetings..."
-              className="w-full rounded-md border border-slate-700 bg-white pl-9 pr-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-slate-700 bg-slate-800 pl-9 pr-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-slate-600"
             />
           </label>
         </div>
