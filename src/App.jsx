@@ -9,6 +9,8 @@ export default function App() {
   const [showAdd, setShowAdd] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
+  const user = { name: 'Alex Johnson', email: 'alex.johnson@example.gov.au' }
+
   // Initialize collapsed state from localStorage or screen width
   useEffect(() => {
     try {
@@ -53,7 +55,7 @@ export default function App() {
     <div className="min-h-screen flex bg-gray-50">
       <Sidebar collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
       <div className="flex-1 flex flex-col min-w-0">
-        <TopBar onAddMeeting={handleAddMeetingClick} />
+        <TopBar onAddMeeting={handleAddMeetingClick} user={user} />
         <main className="p-4 md:p-6">
           <h1 className="text-2xl md:text-3xl font-semibold text-slate-800 mb-4">Parole Board – Meeting Capture</h1>
           <Calendar meetings={meetings} />
