@@ -1,4 +1,3 @@
-import meetings from '../data/meetings.js'
 import MeetingBlock from './MeetingBlock.jsx'
 
 const days = [
@@ -30,7 +29,7 @@ function formatTimeLabel(totalMinutes) {
   return `${hour12}:${minutes.toString().padStart(2, '0')}${period}`
 }
 
-export default function Calendar() {
+export default function Calendar({ meetings = [] }) {
   const slots = generateTimeSlots()
 
   return (
