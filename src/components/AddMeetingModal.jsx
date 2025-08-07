@@ -40,10 +40,10 @@ export default function AddMeetingModal({ onSave, onCancel }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="add-meeting-modal-title" id="add-meeting-modal">
       <div className="absolute inset-0 bg-slate-900/50" onClick={onCancel} />
       <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
-        <h2 className="text-xl font-semibold text-slate-800 mb-4">Add Meeting</h2>
+        <h2 id="add-meeting-modal-title" className="text-xl font-semibold text-slate-800 mb-4">Add Meeting</h2>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>

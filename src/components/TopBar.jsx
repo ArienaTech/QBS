@@ -63,16 +63,24 @@ export default function TopBar({ onAddMeeting, user }) {
         <div className="ml-auto flex items-center gap-3 md:gap-4">
           <button
             onClick={onAddMeeting}
+            aria-label="Add meeting"
+            aria-haspopup="dialog"
+            aria-controls="add-meeting-modal"
             className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3.5 py-2 rounded-md shadow-sm transition-colors"
           >
             <span>Add Meeting</span>
           </button>
 
           <div className="hidden sm:flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-slate-700 text-slate-100 flex items-center justify-center text-sm font-semibold">
+            <div
+              className="h-9 w-9 rounded-full bg-slate-700 text-slate-100 flex items-center justify-center text-sm font-semibold"
+              role="img"
+              aria-label={`User avatar for ${user?.name || 'User'}`}
+              title={user?.name || 'User'}
+            >
               {initials}
             </div>
-            <div className="leading-tight">
+            <div className="leading-tight" aria-label={`Logged in as ${user?.name || 'User'}`}>
               <div className="text-sm font-medium">{user?.name || 'User'}</div>
               <div className="text-[11px] text-emerald-400/90 flex items-center gap-1">
                 <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
