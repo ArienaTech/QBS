@@ -13,10 +13,9 @@ export default function TopBar({ onAddMeeting, user }) {
   const initials = getInitials(user?.name)
 
   return (
-    <header className="sticky top-0 z-30 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-slate-200">
+    <header className="sticky top-0 z-30 bg-slate-900 text-slate-100 border-b border-slate-800/60">
       <div className="h-16 flex items-center gap-3 md:gap-4 px-4 md:px-6">
-        <div className="text-base md:text-lg font-semibold text-slate-800 whitespace-nowrap">Queensland Corrective Services</div>
-
+        {/* Removed title to satisfy request */}
         <div className="flex-1 max-w-xl">
           <label className="relative block">
             <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">
@@ -25,7 +24,7 @@ export default function TopBar({ onAddMeeting, user }) {
             <input
               type="search"
               placeholder="Search matters or meetings..."
-              className="w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-slate-700 bg-white pl-9 pr-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500"
             />
           </label>
         </div>
@@ -39,13 +38,13 @@ export default function TopBar({ onAddMeeting, user }) {
           </button>
 
           <div className="hidden sm:flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-sm font-semibold">
+            <div className="h-9 w-9 rounded-full bg-slate-700 text-slate-100 flex items-center justify-center text-sm font-semibold">
               {initials}
             </div>
             <div className="leading-tight">
-              <div className="text-sm font-medium text-slate-800">{user?.name || 'User'}</div>
-              <div className="text-[11px] text-emerald-600 flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+              <div className="text-sm font-medium">{user?.name || 'User'}</div>
+              <div className="text-[11px] text-emerald-400/90 flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
                 Logged in
               </div>
             </div>
