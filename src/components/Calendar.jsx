@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import MeetingBlock from './MeetingBlock.jsx'
-import OverflowChip from './OverflowChip.jsx'
+
 import NowMarker from './NowMarker.jsx'
 
 const slotHeightPx = 48
@@ -90,13 +90,13 @@ function useMaxVisibleColumns() {
 }
 
 function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expandedClumpIds = new Set()) {
-  if (!dayMeetings || dayMeetings.length === 0) return { events: [], overflow: [] }
+  if (!dayMeetings || dayMeetings.length === 0) return { events: [] }
   const sorted = [...dayMeetings].sort((a, b) => {
     if (a.startMinutes !== b.startMinutes) return a.startMinutes - b.startMinutes
     return (b.endMinutes - b.startMinutes) - (a.endMinutes - a.startMinutes)
   })
   const laidOut = []
-  const overflowChips = []
+  // const overflowChips = []
   let clumpStartIdx = 0
   let clumpMaxEnd = sorted[0].endMinutes
   function assignColumnsForClump(startIdx, endIdx) {
@@ -125,11 +125,7 @@ function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expand
       const colIdx = eventColumnIndex.get(evt) || 0
       if (colIdx < visibleColumns) laidOut.push({ ...evt, __layout: { columnIndex: colIdx, columnCount: visibleColumns } })
     }
-    if (!isExpanded) {
-      const hiddenEvents = clump.filter((evt) => (eventColumnIndex.get(evt) || 0) >= visibleColumns)
-      const hiddenCount = hiddenEvents.length
-      if (hiddenCount > 0) overflowChips.push({ id: `overflow-${dayKey}-${clumpStartMin}-${clumpEndMin}`, clumpId, startMinutes: clumpStartMin, endMinutes: clumpEndMin, hiddenCount, hiddenEvents })
-    }
+    // Overflow disabled for simplicity in this mode
   }
   for (let i = 1; i < sorted.length; i++) {
     const evt = sorted[i]
@@ -137,7 +133,7 @@ function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expand
     else { assignColumnsForClump(clumpStartIdx, i - 1); clumpStartIdx = i; clumpMaxEnd = evt.endMinutes }
   }
   assignColumnsForClump(clumpStartIdx, sorted.length - 1)
-  return { events: laidOut, overflow: overflowChips }
+  return { events: laidOut }
 }
 
 function getMonthPillClass(type) {
@@ -277,7 +273,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                 const legacyIndex = (d.date.getDay() + 6) % 7
                 return typeof mtg.dayIndex === 'number' && mtg.dayIndex === legacyIndex
               })
-              const { events: laidOut, overflow } = layoutMeetingsForDay(dayMeetings, d.iso, maxVisibleColumns, expandedClumpIds)
+              const { events: laidOut } = layoutMeetingsForDay(dayMeetings, d.iso, maxVisibleColumns, expandedClumpIds)
               const isToday = d.iso === todayISO
 
               return (
@@ -290,9 +286,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                     {laidOut.map((mtg) => (
                       <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
                     ))}
-                    {overflow.map((of) => (
-                      <OverflowChip key={of.id} clumpId={of.clumpId} startMinutes={of.startMinutes} endMinutes={of.endMinutes} hiddenCount={of.hiddenCount} hiddenEvents={of.hiddenEvents} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} onToggleExpand={toggleClumpExpansion} isExpanded={expandedClumpIds.has(of.clumpId)} />
-                    ))}
+                    
                   </div>
                 </div>
               )
