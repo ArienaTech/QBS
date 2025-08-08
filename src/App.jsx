@@ -88,7 +88,7 @@ export default function App() {
         <TopBar user={user} />
         <main className="p-4 md:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h1 className="text-2xl md:text-3xl font-semibold text-slate-800">Parole Board – Meeting Capture</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold text-slate-800">Meeting Capture</h1>
             <div className="flex items-center gap-2">
               <DateNav view={calendarView} currentDateISO={currentDateISO} onChange={setCurrentDateISO} />
               <ViewToggle value={calendarView} onChange={setCalendarView} />
