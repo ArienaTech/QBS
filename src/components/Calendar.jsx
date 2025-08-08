@@ -227,9 +227,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                           <span className="font-medium">{formatTimeLabel(m.startMinutes)}</span> {m.title}
                         </div>
                       ))}
-                      {count === 0 && (
-                        <div className="text-[11px] text-slate-400 italic px-1">No meetings</div>
-                      )}
+
                     </div>
                   </div>
                   {count > 0 && (
