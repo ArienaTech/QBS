@@ -13,6 +13,21 @@ function formatISO(d) {
   return `${y}-${m}-${day}`
 }
 
+function startOfWeekMonday(dateISO) {
+  const d = new Date(dateISO + 'T00:00:00')
+  const day = d.getDay()
+  const diff = (day + 6) % 7
+  d.setDate(d.getDate() - diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function addDays(date, n) {
+  const d = new Date(date)
+  d.setDate(d.getDate() + n)
+  return d
+}
+
 export default function App() {
   const [meetings, setMeetings] = useState([])
   const [showAdd, setShowAdd] = useState(false)
@@ -39,32 +54,39 @@ export default function App() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem('meetings')
+      let parsed = []
       if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) {
-          setMeetings(parsed)
-        }
+        const data = JSON.parse(raw)
+        if (Array.isArray(data)) parsed = data
       }
       const viewRaw = localStorage.getItem('calendarView')
       if (viewRaw) setCalendarView(viewRaw)
       const dateRaw = localStorage.getItem('calendarCurrentDate')
       if (dateRaw) setCurrentDateISO(dateRaw)
+
+      // Migrate legacy meetings without date to the current week based on dayIndex
+      if (parsed.length > 0 && parsed.some((m) => !m.date && typeof m.dayIndex === 'number')) {
+        const weekStart = startOfWeekMonday(dateRaw || formatISO(new Date()))
+        const migrated = parsed.map((m) => {
+          if (!m.date && typeof m.dayIndex === 'number' && m.dayIndex >= 0 && m.dayIndex <= 6) {
+            const d = addDays(weekStart, m.dayIndex)
+            return { ...m, date: formatISO(d) }
+          }
+          return m
+        })
+        setMeetings(migrated)
+        try { localStorage.setItem('meetings', JSON.stringify(migrated)) } catch {}
+      } else {
+        setMeetings(parsed)
+      }
     } catch {}
   }, [])
 
   // Persist collapsed state
-  useEffect(() => {
-    try {
-      localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed))
-    } catch {}
-  }, [sidebarCollapsed])
+  useEffect(() => { try { localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed)) } catch {} }, [sidebarCollapsed])
 
   // Persist meetings whenever they change
-  useEffect(() => {
-    try {
-      localStorage.setItem('meetings', JSON.stringify(meetings))
-    } catch {}
-  }, [meetings])
+  useEffect(() => { try { localStorage.setItem('meetings', JSON.stringify(meetings)) } catch {} }, [meetings])
 
   // Persist calendar view/date
   useEffect(() => { try { localStorage.setItem('calendarView', calendarView) } catch {} }, [calendarView])
