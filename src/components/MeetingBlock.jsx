@@ -6,8 +6,27 @@ const typeToColor = {
 }
 
 export default function MeetingBlock({ meeting, slotHeightPx, dayStartMinutes, columnIndex = 0, columnCount = 1 }) {
-  const top = ((meeting.startMinutes - dayStartMinutes) / 30) * slotHeightPx
-  const height = ((meeting.endMinutes - meeting.startMinutes) / 30) * slotHeightPx
+  function toMinutes(value) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string') {
+      if (/^\d{1,2}:\d{2}$/.test(value)) {
+        const [h, m] = value.split(':').map((v) => parseInt(v, 10))
+        return h * 60 + m
+      }
+      const num = Number(value)
+      if (Number.isFinite(num)) return num
+    }
+    return NaN
+  }
+
+  const startMinRaw = toMinutes(meeting.startMinutes)
+  const endMinRaw = toMinutes(meeting.endMinutes)
+  const startMin = Number.isFinite(startMinRaw) ? startMinRaw : 0
+  let endMin = Number.isFinite(endMinRaw) ? endMinRaw : startMin + 30
+  if (endMin <= startMin) endMin = startMin + 30
+
+  const top = ((startMin - dayStartMinutes) / 30) * slotHeightPx
+  const height = ((endMin - startMin) / 30) * slotHeightPx
 
   const color = typeToColor[meeting.type] || typeToColor.Default
 
@@ -23,7 +42,7 @@ export default function MeetingBlock({ meeting, slotHeightPx, dayStartMinutes, c
       style={{ top: `${top}px`, height: `${height}px`, left: `${leftPct}%`, width: `${widthPct}%` }}
     >
       <div className="text-[11px] font-medium opacity-90">
-        {format12Hour(meeting.startMinutes)} – {format12Hour(meeting.endMinutes)}
+        {format12Hour(startMin)} – {format12Hour(endMin)}
       </div>
       <div className="text-sm font-semibold leading-tight truncate">{meeting.title}</div>
       {meeting.boardNumber && (
