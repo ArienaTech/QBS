@@ -3,11 +3,13 @@ import Sidebar from './components/Sidebar.jsx'
 import TopBar from './components/TopBar.jsx'
 import Calendar from './components/Calendar.jsx'
 import AddMeetingModal from './components/AddMeetingModal.jsx'
+import ViewToggle from './components/ViewToggle.jsx'
 
 export default function App() {
   const [meetings, setMeetings] = useState([])
   const [showAdd, setShowAdd] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [calendarView, setCalendarView] = useState('workweek')
 
   const user = { name: 'Alex Johnson', email: 'alex.johnson@example.gov.au' }
 
@@ -34,6 +36,8 @@ export default function App() {
           setMeetings(parsed)
         }
       }
+      const viewRaw = localStorage.getItem('calendarView')
+      if (viewRaw) setCalendarView(viewRaw)
     } catch {}
   }, [])
 
@@ -50,6 +54,13 @@ export default function App() {
       localStorage.setItem('meetings', JSON.stringify(meetings))
     } catch {}
   }, [meetings])
+
+  // Persist calendar view
+  useEffect(() => {
+    try {
+      localStorage.setItem('calendarView', calendarView)
+    } catch {}
+  }, [calendarView])
 
   function handleAddMeetingClick() {
     setShowAdd(true)
@@ -79,17 +90,20 @@ export default function App() {
         <main className="p-4 md:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h1 className="text-2xl md:text-3xl font-semibold text-slate-800">Parole Board – Meeting Capture</h1>
-            <button
-              onClick={handleAddMeetingClick}
-              aria-label="Add meeting"
-              aria-haspopup="dialog"
-              aria-controls="add-meeting-modal"
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3.5 py-2 rounded-md shadow-sm transition-colors"
-            >
-              <span>Add Meeting</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <ViewToggle value={calendarView} onChange={setCalendarView} />
+              <button
+                onClick={handleAddMeetingClick}
+                aria-label="Add meeting"
+                aria-haspopup="dialog"
+                aria-controls="add-meeting-modal"
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3.5 py-2 rounded-md shadow-sm transition-colors"
+              >
+                <span>Add Meeting</span>
+              </button>
+            </div>
           </div>
-          <Calendar meetings={meetings} />
+          <Calendar meetings={meetings} view={calendarView} />
         </main>
       </div>
 

@@ -3,7 +3,7 @@ import MeetingBlock from './MeetingBlock.jsx'
 import OverflowChip from './OverflowChip.jsx'
 import NowMarker from './NowMarker.jsx'
 
-const days = [
+const baseDays = [
   { key: 'mon', label: 'Mon 04/08' },
   { key: 'tue', label: 'Tue 05/08' },
   { key: 'wed', label: 'Wed 06/08' },
@@ -34,7 +34,6 @@ function formatTimeLabel(totalMinutes) {
 }
 
 function getTodayIndex() {
-  // Map JS day (0 Sun..6 Sat) to our Monday-first index 0..4
   const jsDay = new Date().getDay() // 0=Sun
   const mondayFirstIndex = (jsDay + 6) % 7 // 0=Mon..6=Sun
   return mondayFirstIndex >= 0 && mondayFirstIndex <= 4 ? mondayFirstIndex : -1
@@ -44,169 +43,131 @@ function getMinutesSinceMidnight(date = new Date()) {
   return date.getHours() * 60 + date.getMinutes()
 }
 
-// Responsive max columns: 1 on mobile (<640px), 3 on tablet (<1024px), 5 on desktop
 function useMaxVisibleColumns() {
   const [maxCols, setMaxCols] = useState(5)
-
   useEffect(() => {
     function compute() {
       if (typeof window === 'undefined') return 5
       const w = window.innerWidth
-      if (w < 640) return 1 // mobile
-      if (w < 1024) return 3 // tablet
-      return 5 // desktop
+      if (w < 640) return 1
+      if (w < 1024) return 3
+      return 5
     }
-    function onResize() {
-      setMaxCols(compute())
-    }
+    function onResize() { setMaxCols(compute()) }
     setMaxCols(compute())
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
-
   return maxCols
 }
 
-// Given a list of meetings for a single day, compute side-by-side columns for overlapping groups, capping visible columns
 function layoutMeetingsForDay(dayMeetings, dayIndex, maxVisibleColumns = 5, expandedClumpIds = new Set()) {
   if (!dayMeetings || dayMeetings.length === 0) return { events: [], overflow: [] }
-
-  // Sort by start time, then by duration (longer first helps stable layout)
   const sorted = [...dayMeetings].sort((a, b) => {
     if (a.startMinutes !== b.startMinutes) return a.startMinutes - b.startMinutes
     return (b.endMinutes - b.startMinutes) - (a.endMinutes - a.startMinutes)
   })
-
   const laidOut = []
   const overflowChips = []
-
   let clumpStartIdx = 0
   let clumpMaxEnd = sorted[0].endMinutes
-
-  // Helper to assign columns within [startIdx, endIdx] inclusive slice
   function assignColumnsForClump(startIdx, endIdx) {
     const clump = sorted.slice(startIdx, endIdx + 1)
-
-    // Active columns: track end time for each column
-    const columnEndTimes = [] // index => last endMinutes
+    const columnEndTimes = []
     const eventColumnIndex = new Map()
     let maxConcurrent = 0
-
     let clumpStartMin = Infinity
     let clumpEndMin = -Infinity
-
     for (const evt of clump) {
       clumpStartMin = Math.min(clumpStartMin, evt.startMinutes)
       clumpEndMin = Math.max(clumpEndMin, evt.endMinutes)
-
-      // Find first free column where previous event has ended
       let placedColumn = -1
       for (let i = 0; i < columnEndTimes.length; i++) {
-        if (evt.startMinutes >= columnEndTimes[i]) {
-          placedColumn = i
-          break
-        }
+        if (evt.startMinutes >= columnEndTimes[i]) { placedColumn = i; break }
       }
-      if (placedColumn === -1) {
-        placedColumn = columnEndTimes.length
-        columnEndTimes.push(evt.endMinutes)
-      } else {
-        columnEndTimes[placedColumn] = evt.endMinutes
-      }
+      if (placedColumn === -1) { placedColumn = columnEndTimes.length; columnEndTimes.push(evt.endMinutes) }
+      else { columnEndTimes[placedColumn] = evt.endMinutes }
       eventColumnIndex.set(evt, placedColumn)
       maxConcurrent = Math.max(maxConcurrent, columnEndTimes.length)
     }
-
     const clumpId = `clump-${dayIndex}-${clumpStartMin}-${clumpEndMin}`
     const isExpanded = expandedClumpIds.has(clumpId)
-
     const visibleColumns = isExpanded ? (maxConcurrent || 1) : Math.min(maxConcurrent || 1, maxVisibleColumns)
-
-    // Push visible events with adjusted columnCount
     for (const evt of clump) {
       const colIdx = eventColumnIndex.get(evt) || 0
       if (colIdx < visibleColumns) {
-        laidOut.push({
-          ...evt,
-          __layout: {
-            columnIndex: colIdx,
-            columnCount: visibleColumns,
-          },
-        })
+        laidOut.push({ ...evt, __layout: { columnIndex: colIdx, columnCount: visibleColumns } })
       }
     }
-
-    // Overflow chip if any hidden and not expanded
     if (!isExpanded) {
       const hiddenEvents = clump.filter((evt) => (eventColumnIndex.get(evt) || 0) >= visibleColumns)
       const hiddenCount = hiddenEvents.length
       if (hiddenCount > 0) {
-        overflowChips.push({
-          id: `overflow-${dayIndex}-${clumpStartMin}-${clumpEndMin}`,
-          clumpId,
-          startMinutes: clumpStartMin,
-          endMinutes: clumpEndMin,
-          hiddenCount,
-          hiddenEvents,
-        })
+        overflowChips.push({ id: `overflow-${dayIndex}-${clumpStartMin}-${clumpEndMin}`, clumpId, startMinutes: clumpStartMin, endMinutes: clumpEndMin, hiddenCount, hiddenEvents })
       }
     }
   }
-
-  // Build clumps connected by overlap chains
   for (let i = 1; i < sorted.length; i++) {
     const evt = sorted[i]
-    if (evt.startMinutes < clumpMaxEnd) {
-      // still in clump
-      clumpMaxEnd = Math.max(clumpMaxEnd, evt.endMinutes)
-    } else {
-      // close previous clump
-      assignColumnsForClump(clumpStartIdx, i - 1)
-      // start new clump
-      clumpStartIdx = i
-      clumpMaxEnd = evt.endMinutes
-    }
+    if (evt.startMinutes < clumpMaxEnd) clumpMaxEnd = Math.max(clumpMaxEnd, evt.endMinutes)
+    else { assignColumnsForClump(clumpStartIdx, i - 1); clumpStartIdx = i; clumpMaxEnd = evt.endMinutes }
   }
-  // Close last clump
   assignColumnsForClump(clumpStartIdx, sorted.length - 1)
-
   return { events: laidOut, overflow: overflowChips }
 }
 
-export default function Calendar({ meetings = [] }) {
+export default function Calendar({ meetings = [], view = 'workweek' }) {
   const slots = generateTimeSlots()
   const maxVisibleColumns = useMaxVisibleColumns()
   const [expandedClumpIds, setExpandedClumpIds] = useState(new Set())
 
   function toggleClumpExpansion(clumpId) {
-    setExpandedClumpIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(clumpId)) next.delete(clumpId)
-      else next.add(clumpId)
-      return next
-    })
+    setExpandedClumpIds((prev) => { const next = new Set(prev); if (next.has(clumpId)) next.delete(clumpId); else next.add(clumpId); return next })
   }
 
-  // Live now marker state
+  // Now marker
   const todayIndex = getTodayIndex()
-  const [nowTopPx, setNowTopPx] = useState(() => {
-    const minutes = getMinutesSinceMidnight()
-    return ((minutes - startTimeMinutes) / 30) * slotHeightPx
-  })
+  const [nowTopPx, setNowTopPx] = useState(() => ((getMinutesSinceMidnight() - startTimeMinutes) / 30) * slotHeightPx)
+  useEffect(() => { const i = setInterval(() => setNowTopPx(((getMinutesSinceMidnight() - startTimeMinutes) / 30) * slotHeightPx), 30000); return () => clearInterval(i) }, [])
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const minutes = getMinutesSinceMidnight()
-      setNowTopPx(((minutes - startTimeMinutes) / 30) * slotHeightPx)
-    }, 30000)
-    return () => clearInterval(interval)
-  }, [])
+  // Determine days based on view
+  let days
+  if (view === 'day') {
+    const ti = todayIndex >= 0 ? todayIndex : 0
+    days = [baseDays[ti]]
+  } else if (view === 'week') {
+    // Simple week: prepend Sat/Sun labels for demo
+    days = [
+      { key: 'sat', label: 'Sat 03/08' },
+      ...baseDays,
+      { key: 'sun', label: 'Sun 09/08' },
+    ]
+  } else if (view === 'month') {
+    // Placeholder month grid: 4 rows x 7 cols
+    return (
+      <div className="w-full overflow-x-auto">
+        <div className="min-w-[960px] rounded-lg border border-slate-200 bg-white shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-lg font-semibold text-slate-800">Month view (placeholder)</div>
+          </div>
+          <div className="grid grid-cols-7 gap-3">
+            {Array.from({ length: 28 }).map((_, i) => (
+              <div key={i} className="aspect-[4/3] border border-slate-200 rounded-md bg-slate-50" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  } else {
+    // workweek
+    days = baseDays
+  }
 
   return (
     <div className="w-full overflow-x-auto">
       <div className="min-w-[960px] rounded-lg border border-slate-200 bg-white shadow-sm">
         {/* Day headers */}
-        <div className="grid" style={{ gridTemplateColumns: `${timeGutterWidthPx}px repeat(5, minmax(0, 1fr))` }}>
+        <div className="grid" style={{ gridTemplateColumns: `${timeGutterWidthPx}px repeat(${days.length}, minmax(0, 1fr))` }}>
           <div className="h-14 border-b border-r border-slate-200 bg-slate-50/60" />
           {days.map((d) => (
             <div key={d.key} className="h-14 border-b border-slate-200 bg-slate-50/60 flex items-end px-3 pb-2 text-sm font-medium text-slate-700">
@@ -216,15 +177,11 @@ export default function Calendar({ meetings = [] }) {
         </div>
 
         {/* Grid body */}
-        <div className="grid" style={{ gridTemplateColumns: `${timeGutterWidthPx}px repeat(5, minmax(0, 1fr))` }}>
+        <div className="grid" style={{ gridTemplateColumns: `${timeGutterWidthPx}px repeat(${days.length}, minmax(0, 1fr))` }}>
           {/* Time gutter */}
           <div className="relative border-r border-slate-200">
             {slots.map((m) => (
-              <div
-                key={m}
-                className="border-b border-slate-100 text-[11px] text-slate-500 pr-3 flex items-start justify-end pt-1"
-                style={{ height: `${slotHeightPx}px` }}
-              >
+              <div key={m} className="border-b border-slate-100 text-[11px] text-slate-500 pr-3 flex items-start justify-end pt-1" style={{ height: `${slotHeightPx}px` }}>
                 {formatTimeLabel(m)}
               </div>
             ))}
@@ -232,46 +189,22 @@ export default function Calendar({ meetings = [] }) {
 
           {/* Day columns */}
           {days.map((d, dayIndex) => {
-            const dayMeetings = meetings.filter((mtg) => mtg.dayIndex === dayIndex)
-            const { events: laidOut, overflow } = layoutMeetingsForDay(dayMeetings, dayIndex, maxVisibleColumns, expandedClumpIds)
+            const realDayIndex = view === 'week' ? Math.max(0, Math.min(dayIndex - 1, 4)) : dayIndex // map Sat/Sun to edges
+            const dayMeetings = meetings.filter((mtg) => mtg.dayIndex === realDayIndex)
+            const { events: laidOut, overflow } = layoutMeetingsForDay(dayMeetings, realDayIndex, maxVisibleColumns, expandedClumpIds)
 
             return (
               <div key={d.key} className="relative">
-                {/* Slot lines */}
-                {slots.map((m) => (
-                  <div key={m} className="border-b border-slate-100" style={{ height: `${slotHeightPx}px` }} />
-                ))}
-
-                {/* Now marker for today within working hours */}
-                {todayIndex === dayIndex && nowTopPx >= 0 && nowTopPx <= ((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx && (
+                {slots.map((m) => (<div key={m} className="border-b border-slate-100" style={{ height: `${slotHeightPx}px` }} />))}
+                {view !== 'month' && todayIndex === realDayIndex && nowTopPx >= 0 && nowTopPx <= ((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx && (
                   <NowMarker topPx={nowTopPx} />
                 )}
-
-                {/* Meetings for this day */}
                 <div className="absolute inset-x-0 top-0" style={{ height: `${((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx}px` }}>
                   {laidOut.map((mtg) => (
-                    <MeetingBlock
-                      key={mtg.id}
-                      meeting={mtg}
-                      slotHeightPx={slotHeightPx}
-                      dayStartMinutes={startTimeMinutes}
-                      columnIndex={mtg.__layout?.columnIndex || 0}
-                      columnCount={mtg.__layout?.columnCount || 1}
-                    />
+                    <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
                   ))}
                   {overflow.map((of) => (
-                    <OverflowChip
-                      key={of.id}
-                      clumpId={of.clumpId}
-                      startMinutes={of.startMinutes}
-                      endMinutes={of.endMinutes}
-                      hiddenCount={of.hiddenCount}
-                      hiddenEvents={of.hiddenEvents}
-                      slotHeightPx={slotHeightPx}
-                      dayStartMinutes={startTimeMinutes}
-                      onToggleExpand={toggleClumpExpansion}
-                      isExpanded={expandedClumpIds.has(of.clumpId)}
-                    />
+                    <OverflowChip key={of.id} clumpId={of.clumpId} startMinutes={of.startMinutes} endMinutes={of.endMinutes} hiddenCount={of.hiddenCount} hiddenEvents={of.hiddenEvents} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} onToggleExpand={toggleClumpExpansion} isExpanded={expandedClumpIds.has(of.clumpId)} />
                   ))}
                 </div>
               </div>
