@@ -195,10 +195,10 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
               const iso = toISODate(d)
               const inMonth = d.getMonth() === currentMonth
               const isToday = iso === todayISO
-              const dayMeetings = meetings.filter((m) => m.date ? m.date === iso : false).sort((a, b) => a.startMinutes - b.startMinutes)
+              const dayMeetings = meetings
+                .filter((m) => (m.date ? m.date === iso : false))
+                .sort((a, b) => a.startMinutes - b.startMinutes)
               const count = dayMeetings.length
-              const visible = dayMeetings.slice(0, 2)
-              const overflow = count - visible.length
               return (
                 <button
                   key={iso}
@@ -207,15 +207,15 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                   className={`relative aspect-[4/3] rounded-md border text-left ${inMonth ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-200/70'} ${isToday ? 'ring-2 ring-red-400' : ''}`}
                 >
                   <div className="absolute top-1 left-2 text-[11px] font-medium text-slate-600">{d.getDate()}</div>
-                  <div className="absolute inset-x-1 top-5 bottom-1 overflow-hidden">
-                    <div className="space-y-0.5">
-                      {visible.map((m) => (
+                  <div className="absolute inset-x-1 top-5 bottom-1 overflow-auto">
+                    <div className="space-y-0.5 pr-1">
+                      {dayMeetings.map((m) => (
                         <div key={m.id} className="truncate text-[11px] px-1 py-0.5 rounded bg-slate-100 text-slate-700">
                           <span className="font-medium">{formatTimeLabel(m.startMinutes)}</span> {m.title}
                         </div>
                       ))}
-                      {overflow > 0 && (
-                        <div className="text-[11px] text-slate-500">+{overflow} more</div>
+                      {count === 0 && (
+                        <div className="text-[11px] text-slate-400 italic px-1">No meetings</div>
                       )}
                     </div>
                   </div>
