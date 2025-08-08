@@ -5,11 +5,19 @@ import Calendar from './components/Calendar.jsx'
 import AddMeetingModal from './components/AddMeetingModal.jsx'
 import ViewToggle from './components/ViewToggle.jsx'
 
+function formatISO(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export default function App() {
   const [meetings, setMeetings] = useState([])
   const [showAdd, setShowAdd] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [calendarView, setCalendarView] = useState('workweek')
+  const [currentDateISO, setCurrentDateISO] = useState(formatISO(new Date()))
 
   const user = { name: 'Alex Johnson', email: 'alex.johnson@example.gov.au' }
 
@@ -26,7 +34,7 @@ export default function App() {
     } catch {}
   }, [])
 
-  // Load meetings from localStorage
+  // Load meetings and calendar prefs
   useEffect(() => {
     try {
       const raw = localStorage.getItem('meetings')
@@ -38,6 +46,8 @@ export default function App() {
       }
       const viewRaw = localStorage.getItem('calendarView')
       if (viewRaw) setCalendarView(viewRaw)
+      const dateRaw = localStorage.getItem('calendarCurrentDate')
+      if (dateRaw) setCurrentDateISO(dateRaw)
     } catch {}
   }, [])
 
@@ -55,12 +65,13 @@ export default function App() {
     } catch {}
   }, [meetings])
 
-  // Persist calendar view
+  // Persist calendar view/date
   useEffect(() => {
-    try {
-      localStorage.setItem('calendarView', calendarView)
-    } catch {}
+    try { localStorage.setItem('calendarView', calendarView) } catch {}
   }, [calendarView])
+  useEffect(() => {
+    try { localStorage.setItem('calendarCurrentDate', currentDateISO) } catch {}
+  }, [currentDateISO])
 
   function handleAddMeetingClick() {
     setShowAdd(true)
@@ -103,12 +114,12 @@ export default function App() {
               </button>
             </div>
           </div>
-          <Calendar meetings={meetings} view={calendarView} />
+          <Calendar meetings={meetings} view={calendarView} currentDateISO={currentDateISO} onChangeDate={setCurrentDateISO} />
         </main>
       </div>
 
       {showAdd && (
-        <AddMeetingModal onSave={handleSaveMeeting} onCancel={handleCancel} />
+        <AddMeetingModal onSave={handleSaveMeeting} onCancel={handleCancel} defaultDate={currentDateISO} />
       )}
     </div>
   )
