@@ -17,10 +17,15 @@ export default function MeetingBlock({ meeting, slotHeightPx, dayStartMinutes, c
   const widthPct = columnCount > 0 ? (100 - totalGapPct) / columnCount : 100
   const leftPct = columnIndex * (widthPct + gapPct)
 
+  const ariaLabel = `${meeting.title}, ${format12Hour(meeting.startMinutes)} to ${format12Hour(meeting.endMinutes)}${meeting.type ? `, ${meeting.type}` : ''}${meeting.boardNumber ? `, Board ${meeting.boardNumber}` : ''}`
+
   return (
     <div
-      className={`${color} absolute rounded-md shadow-sm text-white p-2.5 transition-colors`}
+      className={`${color} absolute rounded-md shadow-sm text-white p-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-white`}
       style={{ top: `${top}px`, height: `${height}px`, left: `${leftPct}%`, width: `${widthPct}%` }}
+      role="button"
+      tabIndex={0}
+      aria-label={ariaLabel}
     >
       <div className="text-[11px] font-medium opacity-90">
         {format12Hour(meeting.startMinutes)} – {format12Hour(meeting.endMinutes)}

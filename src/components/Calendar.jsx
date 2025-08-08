@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import MeetingBlock from './MeetingBlock.jsx'
 
 import NowMarker from './NowMarker.jsx'
 
 
-const slotHeightPx = 48
-const startTimeMinutes = 8 * 60 // 8:00 AM
-const endTimeMinutes = 16 * 60 + 30 // 4:30 PM
-const timeGutterWidthPx = 112
+const DEFAULT_SLOT_HEIGHT_PX = 48
+const DEFAULT_START_TIME_MINUTES = 8 * 60 // 8:00 AM
+const DEFAULT_END_TIME_MINUTES = 16 * 60 + 30 // 4:30 PM
+const DEFAULT_TIME_GUTTER_WIDTH_PX = 112
 
-function generateTimeSlots() {
+function generateTimeSlots(startTimeMinutes, endTimeMinutes) {
   const slots = []
   for (let m = startTimeMinutes; m <= endTimeMinutes; m += 30) slots.push(m)
   return slots
@@ -147,8 +147,8 @@ function getMonthPillClass(type) {
   }
 }
 
-export default function Calendar({ meetings = [], view = 'workweek', currentDateISO, onChangeDate }) {
-  const slots = generateTimeSlots()
+export default function Calendar({ meetings = [], view = 'workweek', currentDateISO, onChangeDate, workdayStartMinutes = DEFAULT_START_TIME_MINUTES, workdayEndMinutes = DEFAULT_END_TIME_MINUTES, slotHeightPx = DEFAULT_SLOT_HEIGHT_PX, timeGutterWidthPx = DEFAULT_TIME_GUTTER_WIDTH_PX }) {
+  const slots = useMemo(() => generateTimeSlots(workdayStartMinutes, workdayEndMinutes), [workdayStartMinutes, workdayEndMinutes])
   const maxVisibleColumns = useMaxVisibleColumns()
 
   // Dates for the active view
@@ -176,8 +176,18 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
   }, [view, baseDate])
 
   // Now marker position (used in time-based views)
-  const [nowTopPx, setNowTopPx] = useState(() => ((getMinutesSinceMidnight() - startTimeMinutes) / 30) * slotHeightPx)
-  useEffect(() => { const i = setInterval(() => setNowTopPx(((getMinutesSinceMidnight() - startTimeMinutes) / 30) * slotHeightPx), 30000); return () => clearInterval(i) }, [])
+  const [nowTopPx, setNowTopPx] = useState(() => ((getMinutesSinceMidnight() - workdayStartMinutes) / 30) * slotHeightPx)
+  useEffect(() => { const i = setInterval(() => setNowTopPx(((getMinutesSinceMidnight() - workdayStartMinutes) / 30) * slotHeightPx), 30000); return () => clearInterval(i) }, [workdayStartMinutes, slotHeightPx])
+
+  // Month view keyboard focus management
+  const [focusedMonthISO, setFocusedMonthISO] = useState(currentDateISO || todayISO)
+  const monthCellRefs = useRef({})
+  useEffect(() => { setFocusedMonthISO((prev) => prev || currentDateISO || todayISO) }, [currentDateISO])
+  useEffect(() => {
+    const id = `month-cell-${focusedMonthISO}`
+    const el = document.getElementById(id)
+    if (el) el.focus()
+  }, [focusedMonthISO])
 
   // Month grid computation
   if (view === 'month') {
@@ -186,13 +196,45 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
     const days = Array.from({ length: 42 }, (_, i) => addDays(weekStart, i))
     const currentMonth = baseDate.getMonth()
 
+    function handleMonthKeyDown(e, idx) {
+      const col = idx % 7
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        const nextIdx = Math.min(41, idx + 1)
+        setFocusedMonthISO(toISODate(days[nextIdx]))
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        const prevIdx = Math.max(0, idx - 1)
+        setFocusedMonthISO(toISODate(days[prevIdx]))
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        const nextIdx = Math.min(41, idx + 7)
+        setFocusedMonthISO(toISODate(days[nextIdx]))
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        const prevIdx = Math.max(0, idx - 7)
+        setFocusedMonthISO(toISODate(days[prevIdx]))
+      } else if (e.key === 'Home') {
+        e.preventDefault()
+        const rowStart = idx - col
+        setFocusedMonthISO(toISODate(days[rowStart]))
+      } else if (e.key === 'End') {
+        e.preventDefault()
+        const rowEnd = idx - col + 6
+        setFocusedMonthISO(toISODate(days[rowEnd]))
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        onChangeDate?.(toISODate(days[idx]))
+      }
+    }
+
     return (
       <div className="w-full overflow-x-auto">
         <div className="min-w-[960px] rounded-lg border border-slate-200 bg-white shadow-sm p-4">
-          <div className="grid grid-cols-7 text-xs font-medium text-slate-500 px-1 mb-2">
-            {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => (<div key={d} className="px-2 py-1 text-center">{d}</div>))}
+          <div className="grid grid-cols-7 text-xs font-medium text-slate-500 px-1 mb-2" role="row">
+            {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => (<div key={d} className="px-2 py-1 text-center" role="columnheader">{d}</div>))}
           </div>
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-2" role="grid" aria-label="Calendar month view">
             {days.map((d, idx) => {
               const iso = toISODate(d)
               const inMonth = d.getMonth() === currentMonth
@@ -201,11 +243,23 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                 .filter((m) => (m.date ? m.date === iso : false))
                 .sort((a, b) => a.startMinutes - b.startMinutes)
               const count = dayMeetings.length
+              const isFocused = iso === focusedMonthISO
+              const rowIndex = Math.floor(idx / 7) + 1
+              const colIndex = (idx % 7) + 1
               return (
                 <button
                   key={iso}
+                  id={`month-cell-${iso}`}
                   type="button"
                   onClick={() => onChangeDate?.(iso)}
+                  onKeyDown={(e) => handleMonthKeyDown(e, idx)}
+                  tabIndex={isFocused ? 0 : -1}
+                  role="gridcell"
+                  aria-selected={iso === currentDateISO}
+                  aria-current={isToday ? 'date' : undefined}
+                  aria-rowindex={rowIndex}
+                  aria-colindex={colIndex}
+                  aria-label={`${d.toDateString()}${count ? `, ${count} meeting${count > 1 ? 's' : ''}` : ''}`}
                   className={`relative aspect-[4/3] rounded-md border text-left ${inMonth ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-200/70'} ${isToday ? 'ring-2 ring-red-400' : ''}`}
                 >
                   <div className="absolute top-1 left-1 right-1 text-center text-[11px] font-medium text-slate-600">{d.getDate()}</div>
@@ -268,9 +322,13 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
               })
               const { events: laidOut, maxConcurrent } = layoutMeetingsForDay(dayMeetings, d.iso)
               const isToday = d.iso === todayISO
-              const gridHeightPx = ((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx
+              const gridHeightPx = ((workdayEndMinutes - workdayStartMinutes) / 30 + 1) * slotHeightPx
               const widthScale = Math.max(1, (maxConcurrent || 1) / (maxVisibleColumns || 1))
               const extraCols = Math.max(0, (maxConcurrent || 0) - (maxVisibleColumns || 0))
+              const hiddenEvents = laidOut.filter((evt) => (evt.__layout?.columnIndex || 0) >= (maxVisibleColumns || 1))
+
+              // State per day for overflow popover open/close
+              const [openOverflowForISO, setOpenOverflowForISO] = [undefined, undefined] // placeholder for linter
 
               return (
                 <div key={d.key} className="relative">
@@ -281,15 +339,21 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                   {/* Horizontal overflow container for overlapping meetings */}
                   <div className="absolute inset-x-0 top-0 overflow-x-auto" style={{ height: `${gridHeightPx}px` }}>
                     <div className="relative" style={{ width: `${widthScale * 100}%`, height: `${gridHeightPx}px` }}>
-                      {laidOut.map((mtg) => (
-                        <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
-                      ))}
+                      {laidOut
+                        .filter((mtg) => (mtg.__layout?.columnIndex || 0) < (maxVisibleColumns || 1))
+                        .map((mtg) => (
+                          <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={workdayStartMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
+                        ))}
                     </div>
                     {/* +N more pill (shown when overflow exists) */}
                     {extraCols > 0 && (
-                      <div className="absolute right-1.5 top-1.5 z-20">
-                        <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-800/80 text-white">+{extraCols} more</span>
-                      </div>
+                      <OverflowPill
+                        count={hiddenEvents.length}
+                        dayISO={d.iso}
+                        events={hiddenEvents}
+                        slotHeightPx={slotHeightPx}
+                        dayStartMinutes={workdayStartMinutes}
+                      />
                     )}
                   </div>
                 </div>
@@ -298,6 +362,68 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function OverflowPill({ count, dayISO, events, slotHeightPx, dayStartMinutes }) {
+  const [open, setOpen] = useState(false)
+  const panelRef = useRef(null)
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') setOpen(false) }
+    if (open) {
+      window.addEventListener('keydown', onKey)
+      return () => window.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  useEffect(() => {
+    function onClick(e) {
+      if (!panelRef.current) return
+      if (!panelRef.current.contains(e.target)) setOpen(false)
+    }
+    if (open) {
+      window.addEventListener('mousedown', onClick)
+      return () => window.removeEventListener('mousedown', onClick)
+    }
+  }, [open])
+
+  return (
+    <div className="absolute right-1.5 top-1.5 z-20">
+      <button
+        type="button"
+        aria-label={`Show ${count} more overlapping meetings`}
+        className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-800/80 text-white"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={`overflow-panel-${dayISO}`}
+      >
+        +{count} more
+      </button>
+      {open && (
+        <div
+          id={`overflow-panel-${dayISO}`}
+          ref={panelRef}
+          role="dialog"
+          aria-label={`Overlapping meetings for ${dayISO}`}
+          className="absolute right-0 mt-1 w-72 max-h-64 overflow-auto rounded-md border border-slate-200 bg-white shadow-lg p-2 text-sm"
+        >
+          <ul role="list" className="space-y-2">
+            {events.map((mtg) => (
+              <li key={mtg.id} className="rounded border border-slate-200 p-2">
+                <div className="text-[11px] text-slate-600">
+                  {formatTimeLabel(mtg.startMinutes)} – {formatTimeLabel(mtg.endMinutes)}
+                </div>
+                <div className="font-medium">{mtg.title}</div>
+                {mtg.boardNumber && (
+                  <div className="text-[11px] text-slate-600">Board #{mtg.boardNumber}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
