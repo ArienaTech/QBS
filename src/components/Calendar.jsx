@@ -120,7 +120,7 @@ function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expand
     }
     const clumpId = `clump-${dayKey}-${clumpStartMin}-${clumpEndMin}`
     const isExpanded = expandedClumpIds.has(clumpId)
-    const visibleColumns = isExpanded ? (maxConcurrent || 1) : Math.min(maxConcurrent || 1, maxVisibleColumns)
+    const visibleColumns = maxConcurrent || 1
     for (const evt of clump) {
       const colIdx = eventColumnIndex.get(evt) || 0
       if (colIdx < visibleColumns) laidOut.push({ ...evt, __layout: { columnIndex: colIdx, columnCount: visibleColumns } })
