@@ -49,7 +49,6 @@ function formatLabel(view, iso) {
   if (view === 'month') {
     return `${months[d.getMonth()]} ${d.getFullYear()}`
   }
-  // week or workweek: show range Mon..Sun/Mon..Fri
   const start = startOfWeekMonday(d)
   const length = view === 'week' ? 7 : 5
   const end = addDays(start, length - 1)
@@ -87,12 +86,12 @@ export default function DateNav({ view, currentDateISO, onChange }) {
 
   return (
     <div className="inline-flex items-center gap-2">
+      <button type="button" onClick={goToday} className="px-2.5 py-1.5 text-sm rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-sm" aria-label="Jump to today">
+        Today
+      </button>
       <div className="inline-flex rounded-md border border-slate-300 bg-white shadow-sm overflow-hidden">
         <button type="button" onClick={goPrev} className="px-2 py-1.5 text-slate-700 hover:bg-slate-50" aria-label="Previous">
           <ChevronLeft className="h-4 w-4" />
-        </button>
-        <button type="button" onClick={goToday} className="px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-50 border-x border-slate-300" aria-label="Jump to today">
-          Today
         </button>
         <div className="px-3 py-1.5 text-sm font-medium text-slate-800 min-w-[12ch] text-center">
           {label}
