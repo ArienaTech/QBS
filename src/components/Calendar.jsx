@@ -251,10 +251,11 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
             {/* Time gutter */}
             <div className="relative border-r border-slate-200">
               {slots.map((m) => (
-                <div key={m} className="border-b border-slate-100 text-[11px] text-slate-500 pr-3 flex items-start justify-end pt-1" style={{ height: `${slotHeightPx}px` }}>
+                <div key={m} className="text-[11px] text-slate-500 pr-3 flex items-start justify-end pt-1" style={{ height: `${slotHeightPx}px` }}>
                   {formatTimeLabel(m)}
                 </div>
               ))}
+              <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: `repeating-linear-gradient(to bottom, rgba(226,232,240,1) 0, rgba(226,232,240,1) 1px, transparent 1px, transparent ${slotHeightPx}px)` }} />
             </div>
 
             {/* Day columns */}
@@ -274,7 +275,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
 
               return (
                 <div key={d.key} className="relative">
-                  {slots.map((m) => (<div key={m} className="border-b border-slate-100" style={{ height: `${slotHeightPx}px` }} />))}
+                  {slots.map((m) => (<div key={m} className="" style={{ height: `${slotHeightPx}px`, borderBottom: '1px solid rgba(226,232,240,1)' }} />))}
                   {isToday && nowTopPx >= 0 && nowTopPx <= gridHeightPx && (
                     <NowMarker topPx={nowTopPx} />
                   )}
