@@ -111,21 +111,21 @@ export default function App() {
         <main className="p-4 md:p-6">
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-2xl md:text-3xl font-semibold text-slate-800">Meeting Capture</h1>
-            <div className="flex items-center gap-2">
-              <ViewToggle value={calendarView} onChange={setCalendarView} />
-              <button
-                onClick={handleAddMeetingClick}
-                aria-label="Add meeting"
-                aria-haspopup="dialog"
-                aria-controls="add-meeting-modal"
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3.5 py-2 rounded-md shadow-sm transition-colors"
-              >
-                <span>Add Meeting</span>
-              </button>
-            </div>
+            <button
+              onClick={handleAddMeetingClick}
+              aria-label="Add meeting"
+              aria-haspopup="dialog"
+              aria-controls="add-meeting-modal"
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3.5 py-2 rounded-md shadow-sm transition-colors"
+            >
+              <span>Add Meeting</span>
+            </button>
           </div>
           <div className="mt-6 mb-5 pt-2">
-            <DateNav view={calendarView} currentDateISO={currentDateISO} onChange={setCurrentDateISO} />
+            <div className="flex items-center justify-between gap-3">
+              <DateNav view={calendarView} currentDateISO={currentDateISO} onChange={setCurrentDateISO} />
+              <div className="flex-shrink-0"><ViewToggle value={calendarView} onChange={setCalendarView} /></div>
+            </div>
           </div>
           <Calendar meetings={meetings} view={calendarView} currentDateISO={currentDateISO} onChangeDate={setCurrentDateISO} />
         </main>
