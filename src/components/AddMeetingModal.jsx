@@ -1,18 +1,10 @@
 import { useState } from 'react'
 
-const dayOptions = [
-  { value: 0, label: 'Monday (04/08)' },
-  { value: 1, label: 'Tuesday (05/08)' },
-  { value: 2, label: 'Wednesday (06/08)' },
-  { value: 3, label: 'Thursday (07/08)' },
-  { value: 4, label: 'Friday (08/08)' },
-]
-
 const typeOptions = ['General', 'Suspensions', 'Reviews']
 
-export default function AddMeetingModal({ onSave, onCancel }) {
+export default function AddMeetingModal({ onSave, onCancel, defaultDate }) {
   const [title, setTitle] = useState('')
-  const [dayIndex, setDayIndex] = useState(0)
+  const [date, setDate] = useState(() => formatISODate(defaultDate || new Date()))
   const [start, setStart] = useState('09:00')
   const [end, setEnd] = useState('10:00')
   const [type, setType] = useState('General')
@@ -23,10 +15,12 @@ export default function AddMeetingModal({ onSave, onCancel }) {
     e.preventDefault()
     const startMinutes = parseTimeToMinutes(start)
     const endMinutes = parseTimeToMinutes(end)
-    if (!title || endMinutes <= startMinutes) return
+    if (!title || endMinutes <= startMinutes || !date) return
+    const dayIdx = computeDayIndexFromISO(date)
     const meeting = {
       title,
-      dayIndex: Number(dayIndex),
+      date,
+      dayIndex: dayIdx,
       startMinutes,
       endMinutes,
       type,
@@ -57,16 +51,14 @@ export default function AddMeetingModal({ onSave, onCancel }) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Day</label>
-              <select
-                value={dayIndex}
-                onChange={(e) => setDayIndex(e.target.value)}
+              <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {dayOptions.map((d) => (
-                  <option key={d.value} value={d.value}>{d.label}</option>
-                ))}
-              </select>
+                required
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
@@ -137,4 +129,22 @@ export default function AddMeetingModal({ onSave, onCancel }) {
 function parseTimeToMinutes(hhmm) {
   const [h, m] = hhmm.split(':').map((v) => parseInt(v, 10))
   return h * 60 + m
+}
+
+function formatISODate(d) {
+  const date = d instanceof Date ? d : new Date(d)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function computeDayIndexFromISO(iso) {
+  try {
+    const d = new Date(iso + 'T00:00:00')
+    const js = d.getDay() // 0=Sun..6=Sat
+    const mondayFirst = (js + 6) % 7 // 0=Mon..6=Sun
+    if (mondayFirst >= 0 && mondayFirst <= 4) return mondayFirst
+  } catch {}
+  return 0
 }

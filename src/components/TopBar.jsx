@@ -10,7 +10,7 @@ function getInitials(name = '') {
     .join('') || 'U'
 }
 
-export default function TopBar({ onAddMeeting, user }) {
+export default function TopBar({ user }) {
   const initials = getInitials(user?.name)
 
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
@@ -61,15 +61,6 @@ export default function TopBar({ onAddMeeting, user }) {
         </button>
 
         <div className="ml-auto flex items-center gap-3 md:gap-4">
-          <button
-            onClick={onAddMeeting}
-            aria-label="Add meeting"
-            aria-haspopup="dialog"
-            aria-controls="add-meeting-modal"
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3.5 py-2 rounded-md shadow-sm transition-colors"
-          >
-            <span>Add Meeting</span>
-          </button>
 
           <div className="hidden sm:flex items-center gap-3">
             <div
