@@ -309,8 +309,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                     ref={(el) => {
                       if (el) {
                         dayScrollRefs.set(d.key, el)
-                        if (typeof queueMicrotask === 'function') queueMicrotask(() => updateScrollHints(d.key))
-                        else Promise.resolve().then(() => updateScrollHints(d.key))
+                        setTimeout(() => updateScrollHints(d.key), 0)
                       } else {
                         dayScrollRefs.delete(d.key)
                         setScrollHints((prev) => {
