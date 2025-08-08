@@ -1,4 +1,5 @@
 import MeetingBlock from './MeetingBlock.jsx'
+import OverflowChip from './OverflowChip.jsx'
 
 const days = [
   { key: 'mon', label: 'Mon 04/08' },
@@ -29,9 +30,9 @@ function formatTimeLabel(totalMinutes) {
   return `${hour12}:${minutes.toString().padStart(2, '0')}${period}`
 }
 
-// Given a list of meetings for a single day, compute side-by-side columns for overlapping groups
-function layoutMeetingsForDay(dayMeetings) {
-  if (!dayMeetings || dayMeetings.length === 0) return []
+// Given a list of meetings for a single day, compute side-by-side columns for overlapping groups, capping visible columns
+function layoutMeetingsForDay(dayMeetings, maxVisibleColumns = 5) {
+  if (!dayMeetings || dayMeetings.length === 0) return { events: [], overflow: [] }
 
   // Sort by start time, then by duration (longer first helps stable layout)
   const sorted = [...dayMeetings].sort((a, b) => {
@@ -40,6 +41,7 @@ function layoutMeetingsForDay(dayMeetings) {
   })
 
   const laidOut = []
+  const overflowChips = []
 
   let clumpStartIdx = 0
   let clumpMaxEnd = sorted[0].endMinutes
@@ -53,7 +55,13 @@ function layoutMeetingsForDay(dayMeetings) {
     const eventColumnIndex = new Map()
     let maxConcurrent = 0
 
+    let clumpStartMin = Infinity
+    let clumpEndMin = -Infinity
+
     for (const evt of clump) {
+      clumpStartMin = Math.min(clumpStartMin, evt.startMinutes)
+      clumpEndMin = Math.max(clumpEndMin, evt.endMinutes)
+
       // Find first free column where previous event has ended
       let placedColumn = -1
       for (let i = 0; i < columnEndTimes.length; i++) {
@@ -72,14 +80,32 @@ function layoutMeetingsForDay(dayMeetings) {
       maxConcurrent = Math.max(maxConcurrent, columnEndTimes.length)
     }
 
-    // Push with layout info
+    const visibleColumns = Math.min(maxConcurrent || 1, maxVisibleColumns)
+
+    // Push visible events with adjusted columnCount
     for (const evt of clump) {
-      laidOut.push({
-        ...evt,
-        __layout: {
-          columnIndex: eventColumnIndex.get(evt) || 0,
-          columnCount: maxConcurrent || 1,
-        },
+      const colIdx = eventColumnIndex.get(evt) || 0
+      if (colIdx < visibleColumns) {
+        laidOut.push({
+          ...evt,
+          __layout: {
+            columnIndex: colIdx,
+            columnCount: visibleColumns,
+          },
+        })
+      }
+    }
+
+    // Overflow chip if any hidden
+    const hiddenEvents = clump.filter((evt) => (eventColumnIndex.get(evt) || 0) >= visibleColumns)
+    const hiddenCount = hiddenEvents.length
+    if (hiddenCount > 0) {
+      overflowChips.push({
+        id: `overflow-${clumpStartMin}-${clumpEndMin}-${startIdx}`,
+        startMinutes: clumpStartMin,
+        endMinutes: clumpEndMin,
+        hiddenCount,
+        hiddenEvents,
       })
     }
   }
@@ -101,7 +127,7 @@ function layoutMeetingsForDay(dayMeetings) {
   // Close last clump
   assignColumnsForClump(clumpStartIdx, sorted.length - 1)
 
-  return laidOut
+  return { events: laidOut, overflow: overflowChips }
 }
 
 export default function Calendar({ meetings = [] }) {
@@ -138,7 +164,7 @@ export default function Calendar({ meetings = [] }) {
           {/* Day columns */}
           {days.map((d, dayIndex) => {
             const dayMeetings = meetings.filter((mtg) => mtg.dayIndex === dayIndex)
-            const laidOut = layoutMeetingsForDay(dayMeetings)
+            const { events: laidOut, overflow } = layoutMeetingsForDay(dayMeetings, 5)
 
             return (
               <div key={d.key} className="relative">
@@ -157,6 +183,17 @@ export default function Calendar({ meetings = [] }) {
                       dayStartMinutes={startTimeMinutes}
                       columnIndex={mtg.__layout?.columnIndex || 0}
                       columnCount={mtg.__layout?.columnCount || 1}
+                    />
+                  ))}
+                  {overflow.map((of) => (
+                    <OverflowChip
+                      key={of.id}
+                      startMinutes={of.startMinutes}
+                      endMinutes={of.endMinutes}
+                      hiddenCount={of.hiddenCount}
+                      hiddenEvents={of.hiddenEvents}
+                      slotHeightPx={slotHeightPx}
+                      dayStartMinutes={startTimeMinutes}
                     />
                   ))}
                 </div>
