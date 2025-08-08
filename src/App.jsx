@@ -4,6 +4,7 @@ import TopBar from './components/TopBar.jsx'
 import Calendar from './components/Calendar.jsx'
 import AddMeetingModal from './components/AddMeetingModal.jsx'
 import ViewToggle from './components/ViewToggle.jsx'
+import DateNav from './components/DateNav.jsx'
 
 function formatISO(d) {
   const y = d.getFullYear()
@@ -66,32 +67,19 @@ export default function App() {
   }, [meetings])
 
   // Persist calendar view/date
-  useEffect(() => {
-    try { localStorage.setItem('calendarView', calendarView) } catch {}
-  }, [calendarView])
-  useEffect(() => {
-    try { localStorage.setItem('calendarCurrentDate', currentDateISO) } catch {}
-  }, [currentDateISO])
+  useEffect(() => { try { localStorage.setItem('calendarView', calendarView) } catch {} }, [calendarView])
+  useEffect(() => { try { localStorage.setItem('calendarCurrentDate', currentDateISO) } catch {} }, [currentDateISO])
 
-  function handleAddMeetingClick() {
-    setShowAdd(true)
-  }
+  function handleAddMeetingClick() { setShowAdd(true) }
 
   function handleSaveMeeting(newMeeting) {
-    setMeetings((prev) => [
-      ...prev,
-      { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, ...newMeeting },
-    ])
+    setMeetings((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, ...newMeeting }])
     setShowAdd(false)
   }
 
-  function handleCancel() {
-    setShowAdd(false)
-  }
+  function handleCancel() { setShowAdd(false) }
 
-  function toggleSidebar() {
-    setSidebarCollapsed((v) => !v)
-  }
+  function toggleSidebar() { setSidebarCollapsed((v) => !v) }
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -102,6 +90,7 @@ export default function App() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <h1 className="text-2xl md:text-3xl font-semibold text-slate-800">Parole Board – Meeting Capture</h1>
             <div className="flex items-center gap-2">
+              <DateNav view={calendarView} currentDateISO={currentDateISO} onChange={setCurrentDateISO} />
               <ViewToggle value={calendarView} onChange={setCalendarView} />
               <button
                 onClick={handleAddMeetingClick}
