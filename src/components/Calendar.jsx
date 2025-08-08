@@ -201,7 +201,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
       <div className="w-full overflow-x-auto">
         <div className="min-w-[960px] rounded-lg border border-slate-200 bg-white shadow-sm p-4">
           <div className="grid grid-cols-7 text-xs font-medium text-slate-500 px-1 mb-2">
-            {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => (<div key={d} className="px-2 py-1">{d}</div>))}
+            {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => (<div key={d} className="px-2 py-1 text-center">{d}</div>))}
           </div>
           <div className="grid grid-cols-7 gap-2">
             {days.map((d, idx) => {
