@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import MeetingBlock from './MeetingBlock.jsx'
 import OverflowChip from './OverflowChip.jsx'
+import NowMarker from './NowMarker.jsx'
 
 const days = [
   { key: 'mon', label: 'Mon 04/08' },
@@ -30,6 +31,17 @@ function formatTimeLabel(totalMinutes) {
   let hour12 = hours24 % 12
   if (hour12 === 0) hour12 = 12
   return `${hour12}:${minutes.toString().padStart(2, '0')}${period}`
+}
+
+function getTodayIndex() {
+  // Map JS day (0 Sun..6 Sat) to our Monday-first index 0..4
+  const jsDay = new Date().getDay() // 0=Sun
+  const mondayFirstIndex = (jsDay + 6) % 7 // 0=Mon..6=Sun
+  return mondayFirstIndex >= 0 && mondayFirstIndex <= 4 ? mondayFirstIndex : -1
+}
+
+function getMinutesSinceMidnight(date = new Date()) {
+  return date.getHours() * 60 + date.getMinutes()
 }
 
 // Responsive max columns: 1 on mobile (<640px), 3 on tablet (<1024px), 5 on desktop
@@ -175,6 +187,21 @@ export default function Calendar({ meetings = [] }) {
     })
   }
 
+  // Live now marker state
+  const todayIndex = getTodayIndex()
+  const [nowTopPx, setNowTopPx] = useState(() => {
+    const minutes = getMinutesSinceMidnight()
+    return ((minutes - startTimeMinutes) / 30) * slotHeightPx
+  })
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const minutes = getMinutesSinceMidnight()
+      setNowTopPx(((minutes - startTimeMinutes) / 30) * slotHeightPx)
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <div className="w-full overflow-x-auto">
       <div className="min-w-[960px] rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -214,6 +241,11 @@ export default function Calendar({ meetings = [] }) {
                 {slots.map((m) => (
                   <div key={m} className="border-b border-slate-100" style={{ height: `${slotHeightPx}px` }} />
                 ))}
+
+                {/* Now marker for today within working hours */}
+                {todayIndex === dayIndex && nowTopPx >= 0 && nowTopPx <= ((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx && (
+                  <NowMarker topPx={nowTopPx} />
+                )}
 
                 {/* Meetings for this day */}
                 <div className="absolute inset-x-0 top-0" style={{ height: `${((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx}px` }}>
