@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import MeetingBlock from './MeetingBlock.jsx'
 import OverflowChip from './OverflowChip.jsx'
 
@@ -28,6 +29,29 @@ function formatTimeLabel(totalMinutes) {
   let hour12 = hours24 % 12
   if (hour12 === 0) hour12 = 12
   return `${hour12}:${minutes.toString().padStart(2, '0')}${period}`
+}
+
+// Responsive max columns: 1 on mobile (<640px), 3 on tablet (<1024px), 5 on desktop
+function useMaxVisibleColumns() {
+  const [maxCols, setMaxCols] = useState(5)
+
+  useEffect(() => {
+    function compute() {
+      if (typeof window === 'undefined') return 5
+      const w = window.innerWidth
+      if (w < 640) return 1 // mobile
+      if (w < 1024) return 3 // tablet
+      return 5 // desktop
+    }
+    function onResize() {
+      setMaxCols(compute())
+    }
+    setMaxCols(compute())
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return maxCols
 }
 
 // Given a list of meetings for a single day, compute side-by-side columns for overlapping groups, capping visible columns
@@ -132,6 +156,7 @@ function layoutMeetingsForDay(dayMeetings, maxVisibleColumns = 5) {
 
 export default function Calendar({ meetings = [] }) {
   const slots = generateTimeSlots()
+  const maxVisibleColumns = useMaxVisibleColumns()
 
   return (
     <div className="w-full overflow-x-auto">
@@ -164,7 +189,7 @@ export default function Calendar({ meetings = [] }) {
           {/* Day columns */}
           {days.map((d, dayIndex) => {
             const dayMeetings = meetings.filter((mtg) => mtg.dayIndex === dayIndex)
-            const { events: laidOut, overflow } = layoutMeetingsForDay(dayMeetings, 5)
+            const { events: laidOut, overflow } = layoutMeetingsForDay(dayMeetings, maxVisibleColumns)
 
             return (
               <div key={d.key} className="relative">
