@@ -124,7 +124,7 @@ export default function App() {
               </button>
             </div>
           </div>
-          <div className="mt-2 mb-4">
+          <div className="mt-6 mb-5 pt-2">
             <DateNav view={calendarView} currentDateISO={currentDateISO} onChange={setCurrentDateISO} />
           </div>
           <Calendar meetings={meetings} view={calendarView} currentDateISO={currentDateISO} onChangeDate={setCurrentDateISO} />
