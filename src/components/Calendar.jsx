@@ -90,7 +90,7 @@ function useMaxVisibleColumns() {
   return maxCols
 }
 
-function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expandedClumpIds = new Set()) {
+function layoutMeetingsForDay(dayMeetings, dayKey) {
   if (!dayMeetings || dayMeetings.length === 0) return { events: [], maxConcurrent: 0 }
   const sorted = [...dayMeetings].sort((a, b) => {
     if (a.startMinutes !== b.startMinutes) return a.startMinutes - b.startMinutes
@@ -119,10 +119,6 @@ function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expand
       eventColumnIndex.set(evt, placedColumn)
       maxConcurrent = Math.max(maxConcurrent, columnEndTimes.length)
     }
-    const clumpId = `clump-${dayKey}-${clumpStartMin}-${clumpEndMin}`
-    const isExpanded = expandedClumpIds.has(clumpId)
-    // We always compute against total columns so we can horizontally scroll to see more
-    // All events get their absolute left/width based on the total columns for the clump
     for (const evt of clump) {
       const colIdx = eventColumnIndex.get(evt) || 0
       laidOut.push({ ...evt, __layout: { columnIndex: colIdx, columnCount: maxConcurrent } })
@@ -154,11 +150,6 @@ function getMonthPillClass(type) {
 export default function Calendar({ meetings = [], view = 'workweek', currentDateISO, onChangeDate }) {
   const slots = generateTimeSlots()
   const maxVisibleColumns = useMaxVisibleColumns()
-  const [expandedClumpIds, setExpandedClumpIds] = useState(new Set())
-
-  function toggleClumpExpansion(clumpId) {
-    setExpandedClumpIds((prev) => { const next = new Set(prev); if (next.has(clumpId)) next.delete(clumpId); else next.add(clumpId); return next })
-  }
 
   // Dates for the active view
   const todayISO = isoToday()
@@ -275,7 +266,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                 const legacyIndex = (d.date.getDay() + 6) % 7
                 return typeof mtg.dayIndex === 'number' && mtg.dayIndex === legacyIndex
               })
-              const { events: laidOut, maxConcurrent } = layoutMeetingsForDay(dayMeetings, d.iso, maxVisibleColumns, expandedClumpIds)
+              const { events: laidOut, maxConcurrent } = layoutMeetingsForDay(dayMeetings, d.iso)
               const isToday = d.iso === todayISO
               const gridHeightPx = ((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx
               const widthScale = Math.max(1, (maxConcurrent || 1) / (maxVisibleColumns || 1))
