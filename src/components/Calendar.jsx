@@ -246,11 +246,23 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
         {/* Day headers */}
         <div className="grid" style={{ gridTemplateColumns: `${timeGutterWidthPx}px repeat(${dayList.length}, minmax(0, 1fr))` }}>
           <div className="h-14 border-b border-r border-slate-200 bg-slate-50/60" />
-          {dayList.map((d) => (
-            <div key={d.key} className="h-14 border-b border-slate-200 bg-slate-50/60 flex items-end justify-center px-3 pb-2 text-sm font-medium text-slate-700">
-              {d.label}
-            </div>
-          ))}
+          {dayList.map((d) => {
+            const dayCount = meetings.filter((mtg) => {
+              if (mtg.date) return mtg.date === d.iso
+              const legacyIndex = (d.date.getDay() + 6) % 7
+              return typeof mtg.dayIndex === 'number' && mtg.dayIndex === legacyIndex
+            }).length
+            return (
+              <div key={d.key} className="h-14 border-b border-slate-200 bg-slate-50/60 flex items-end justify-center px-3 pb-2 text-sm font-medium text-slate-700">
+                <div className="flex items-center gap-2">
+                  <span>{d.label}</span>
+                  {dayCount > 0 && (
+                    <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-blue-600 text-white">{dayCount}</span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
 
         {/* Grid body (scrollable) */}
