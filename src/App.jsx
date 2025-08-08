@@ -77,7 +77,18 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar user={user} />
         <main className="p-4 md:p-6">
-          <h1 className="text-2xl md:text-3xl font-semibold text-slate-800 mb-4">Parole Board – Meeting Capture</h1>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h1 className="text-2xl md:text-3xl font-semibold text-slate-800">Parole Board – Meeting Capture</h1>
+            <button
+              onClick={handleAddMeetingClick}
+              aria-label="Add meeting"
+              aria-haspopup="dialog"
+              aria-controls="add-meeting-modal"
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3.5 py-2 rounded-md shadow-sm transition-colors"
+            >
+              <span>Add Meeting</span>
+            </button>
+          </div>
           <Calendar meetings={meetings} />
         </main>
       </div>

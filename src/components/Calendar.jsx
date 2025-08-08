@@ -13,6 +13,7 @@ const days = [
 const slotHeightPx = 48
 const startTimeMinutes = 8 * 60 // 8:00 AM
 const endTimeMinutes = 16 * 60 + 30 // 4:30 PM
+const timeGutterWidthPx = 112
 
 function generateTimeSlots() {
   const slots = []
@@ -162,8 +163,8 @@ export default function Calendar({ meetings = [] }) {
     <div className="w-full overflow-x-auto">
       <div className="min-w-[960px] rounded-lg border border-slate-200 bg-white shadow-sm">
         {/* Day headers */}
-        <div className="grid" style={{ gridTemplateColumns: '96px repeat(5, minmax(0, 1fr))' }}>
-          <div className="h-14 border-b border-slate-200 bg-slate-50/60" />
+        <div className="grid" style={{ gridTemplateColumns: `${timeGutterWidthPx}px repeat(5, minmax(0, 1fr))` }}>
+          <div className="h-14 border-b border-r border-slate-200 bg-slate-50/60" />
           {days.map((d) => (
             <div key={d.key} className="h-14 border-b border-slate-200 bg-slate-50/60 flex items-end px-3 pb-2 text-sm font-medium text-slate-700">
               {d.label}
@@ -172,13 +173,13 @@ export default function Calendar({ meetings = [] }) {
         </div>
 
         {/* Grid body */}
-        <div className="grid" style={{ gridTemplateColumns: '96px repeat(5, minmax(0, 1fr))' }}>
+        <div className="grid" style={{ gridTemplateColumns: `${timeGutterWidthPx}px repeat(5, minmax(0, 1fr))` }}>
           {/* Time gutter */}
-          <div className="relative">
+          <div className="relative border-r border-slate-200">
             {slots.map((m) => (
               <div
                 key={m}
-                className="border-b border-slate-100 text-[11px] text-slate-500 pr-2 flex items-start justify-end pt-1"
+                className="border-b border-slate-100 text-[11px] text-slate-500 pr-3 flex items-start justify-end pt-1"
                 style={{ height: `${slotHeightPx}px` }}
               >
                 {formatTimeLabel(m)}
