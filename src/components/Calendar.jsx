@@ -219,7 +219,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                   onClick={() => onChangeDate?.(iso)}
                   className={`relative aspect-[4/3] rounded-md border text-left ${inMonth ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-200/70'} ${isToday ? 'ring-2 ring-red-400' : ''}`}
                 >
-                  <div className="absolute top-1 left-2 text-[11px] font-medium text-slate-600">{d.getDate()}</div>
+                  <div className="absolute top-1 left-1 right-1 text-center text-[11px] font-medium text-slate-600">{d.getDate()}</div>
                   <div className="absolute inset-x-1 top-5 bottom-1 overflow-auto">
                     <div className="space-y-0.5 pr-1">
                       {dayMeetings.map((m) => (
@@ -250,7 +250,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
         <div className="grid" style={{ gridTemplateColumns: `${timeGutterWidthPx}px repeat(${dayList.length}, minmax(0, 1fr))` }}>
           <div className="h-14 border-b border-r border-slate-200 bg-slate-50/60" />
           {dayList.map((d) => (
-            <div key={d.key} className="h-14 border-b border-slate-200 bg-slate-50/60 flex items-end px-3 pb-2 text-sm font-medium text-slate-700">
+            <div key={d.key} className="h-14 border-b border-slate-200 bg-slate-50/60 flex items-end justify-center px-3 pb-2 text-sm font-medium text-slate-700">
               {d.label}
             </div>
           ))}
