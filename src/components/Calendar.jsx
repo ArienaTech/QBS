@@ -256,46 +256,48 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
           ))}
         </div>
 
-        {/* Grid body */}
-        <div className="grid" style={{ gridTemplateColumns: `${timeGutterWidthPx}px repeat(${dayList.length}, minmax(0, 1fr))` }}>
-          {/* Time gutter */}
-          <div className="relative border-r border-slate-200">
-            {slots.map((m) => (
-              <div key={m} className="border-b border-slate-100 text-[11px] text-slate-500 pr-3 flex items-start justify-end pt-1" style={{ height: `${slotHeightPx}px` }}>
-                {formatTimeLabel(m)}
-              </div>
-            ))}
-          </div>
-
-          {/* Day columns */}
-          {dayList.map((d) => {
-            // Filter meetings by ISO date if available, fallback to legacy dayIndex for Mon-Fri mapping
-            const dayMeetings = meetings.filter((mtg) => {
-              if (mtg.date) return mtg.date === d.iso
-              // legacy: map Monday-first index 0..4
-              const legacyIndex = (d.date.getDay() + 6) % 7
-              return typeof mtg.dayIndex === 'number' && mtg.dayIndex === legacyIndex
-            })
-            const { events: laidOut, overflow } = layoutMeetingsForDay(dayMeetings, d.iso, maxVisibleColumns, expandedClumpIds)
-            const isToday = d.iso === todayISO
-
-            return (
-              <div key={d.key} className="relative">
-                {slots.map((m) => (<div key={m} className="border-b border-slate-100" style={{ height: `${slotHeightPx}px` }} />))}
-                {isToday && nowTopPx >= 0 && nowTopPx <= ((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx && (
-                  <NowMarker topPx={nowTopPx} />
-                )}
-                <div className="absolute inset-x-0 top-0" style={{ height: `${((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx}px` }}>
-                  {laidOut.map((mtg) => (
-                    <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
-                  ))}
-                  {overflow.map((of) => (
-                    <OverflowChip key={of.id} clumpId={of.clumpId} startMinutes={of.startMinutes} endMinutes={of.endMinutes} hiddenCount={of.hiddenCount} hiddenEvents={of.hiddenEvents} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} onToggleExpand={toggleClumpExpansion} isExpanded={expandedClumpIds.has(of.clumpId)} />
-                  ))}
+        {/* Grid body (scrollable) */}
+        <div className="max-h-[70vh] overflow-y-auto">
+          <div className="grid" style={{ gridTemplateColumns: `${timeGutterWidthPx}px repeat(${dayList.length}, minmax(0, 1fr))` }}>
+            {/* Time gutter */}
+            <div className="relative border-r border-slate-200">
+              {slots.map((m) => (
+                <div key={m} className="border-b border-slate-100 text-[11px] text-slate-500 pr-3 flex items-start justify-end pt-1" style={{ height: `${slotHeightPx}px` }}>
+                  {formatTimeLabel(m)}
                 </div>
-              </div>
-            )
-          })}
+              ))}
+            </div>
+
+            {/* Day columns */}
+            {dayList.map((d) => {
+              // Filter meetings by ISO date if available, fallback to legacy dayIndex for Mon-Fri mapping
+              const dayMeetings = meetings.filter((mtg) => {
+                if (mtg.date) return mtg.date === d.iso
+                // legacy: map Monday-first index 0..4
+                const legacyIndex = (d.date.getDay() + 6) % 7
+                return typeof mtg.dayIndex === 'number' && mtg.dayIndex === legacyIndex
+              })
+              const { events: laidOut, overflow } = layoutMeetingsForDay(dayMeetings, d.iso, maxVisibleColumns, expandedClumpIds)
+              const isToday = d.iso === todayISO
+
+              return (
+                <div key={d.key} className="relative">
+                  {slots.map((m) => (<div key={m} className="border-b border-slate-100" style={{ height: `${slotHeightPx}px` }} />))}
+                  {isToday && nowTopPx >= 0 && nowTopPx <= ((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx && (
+                    <NowMarker topPx={nowTopPx} />
+                  )}
+                  <div className="absolute inset-x-0 top-0" style={{ height: `${((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx}px` }}>
+                    {laidOut.map((mtg) => (
+                      <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
+                    ))}
+                    {overflow.map((of) => (
+                      <OverflowChip key={of.id} clumpId={of.clumpId} startMinutes={of.startMinutes} endMinutes={of.endMinutes} hiddenCount={of.hiddenCount} hiddenEvents={of.hiddenEvents} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} onToggleExpand={toggleClumpExpansion} isExpanded={expandedClumpIds.has(of.clumpId)} />
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
