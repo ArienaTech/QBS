@@ -16,8 +16,19 @@ function generateTimeSlots() {
 }
 
 function formatTimeLabel(totalMinutes) {
-  const hours24 = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
+  let total = totalMinutes
+  if (typeof totalMinutes === 'string') {
+    if (/^\d{1,2}:\d{2}$/.test(totalMinutes)) {
+      const [h, m] = totalMinutes.split(':').map((v) => parseInt(v, 10))
+      total = h * 60 + m
+    } else {
+      const num = Number(totalMinutes)
+      total = Number.isFinite(num) ? num : 0
+    }
+  }
+  if (!Number.isFinite(total)) total = 0
+  const hours24 = Math.floor(total / 60)
+  const minutes = total % 60
   const period = hours24 >= 12 ? 'PM' : 'AM'
   let hour12 = hours24 % 12
   if (hour12 === 0) hour12 = 12
