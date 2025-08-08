@@ -90,15 +90,15 @@ function useMaxVisibleColumns() {
 }
 
 function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expandedClumpIds = new Set()) {
-  if (!dayMeetings || dayMeetings.length === 0) return { events: [] }
+  if (!dayMeetings || dayMeetings.length === 0) return { events: [], maxConcurrent: 0 }
   const sorted = [...dayMeetings].sort((a, b) => {
     if (a.startMinutes !== b.startMinutes) return a.startMinutes - b.startMinutes
     return (b.endMinutes - b.startMinutes) - (a.endMinutes - a.startMinutes)
   })
   const laidOut = []
-  // const overflowChips = []
   let clumpStartIdx = 0
   let clumpMaxEnd = sorted[0].endMinutes
+  let maxConcurrentAcrossClumps = 0
   function assignColumnsForClump(startIdx, endIdx) {
     const clump = sorted.slice(startIdx, endIdx + 1)
     const columnEndTimes = []
@@ -120,12 +120,13 @@ function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expand
     }
     const clumpId = `clump-${dayKey}-${clumpStartMin}-${clumpEndMin}`
     const isExpanded = expandedClumpIds.has(clumpId)
-    const visibleColumns = maxConcurrent || 1
+    // We always compute against total columns so we can horizontally scroll to see more
+    // All events get their absolute left/width based on the total columns for the clump
     for (const evt of clump) {
       const colIdx = eventColumnIndex.get(evt) || 0
-      if (colIdx < visibleColumns) laidOut.push({ ...evt, __layout: { columnIndex: colIdx, columnCount: visibleColumns } })
+      laidOut.push({ ...evt, __layout: { columnIndex: colIdx, columnCount: maxConcurrent } })
     }
-    // Overflow disabled for simplicity in this mode
+    maxConcurrentAcrossClumps = Math.max(maxConcurrentAcrossClumps, maxConcurrent)
   }
   for (let i = 1; i < sorted.length; i++) {
     const evt = sorted[i]
@@ -133,7 +134,7 @@ function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expand
     else { assignColumnsForClump(clumpStartIdx, i - 1); clumpStartIdx = i; clumpMaxEnd = evt.endMinutes }
   }
   assignColumnsForClump(clumpStartIdx, sorted.length - 1)
-  return { events: laidOut }
+  return { events: laidOut, maxConcurrent: maxConcurrentAcrossClumps }
 }
 
 function getMonthPillClass(type) {
@@ -273,20 +274,24 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                 const legacyIndex = (d.date.getDay() + 6) % 7
                 return typeof mtg.dayIndex === 'number' && mtg.dayIndex === legacyIndex
               })
-              const { events: laidOut } = layoutMeetingsForDay(dayMeetings, d.iso, maxVisibleColumns, expandedClumpIds)
+              const { events: laidOut, maxConcurrent } = layoutMeetingsForDay(dayMeetings, d.iso, maxVisibleColumns, expandedClumpIds)
               const isToday = d.iso === todayISO
+              const gridHeightPx = ((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx
+              const widthScale = Math.max(1, (maxConcurrent || 1) / (maxVisibleColumns || 1))
 
               return (
                 <div key={d.key} className="relative">
                   {slots.map((m) => (<div key={m} className="border-b border-slate-100" style={{ height: `${slotHeightPx}px` }} />))}
-                  {isToday && nowTopPx >= 0 && nowTopPx <= ((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx && (
+                  {isToday && nowTopPx >= 0 && nowTopPx <= gridHeightPx && (
                     <NowMarker topPx={nowTopPx} />
                   )}
-                  <div className="absolute inset-x-0 top-0" style={{ height: `${((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx}px` }}>
-                    {laidOut.map((mtg) => (
-                      <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
-                    ))}
-                    
+                  {/* Horizontal overflow container for overlapping meetings */}
+                  <div className="absolute inset-x-0 top-0 overflow-x-auto" style={{ height: `${gridHeightPx}px` }}>
+                    <div className="relative" style={{ width: `${widthScale * 100}%`, height: `${gridHeightPx}px` }}>
+                      {laidOut.map((mtg) => (
+                        <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
+                      ))}
+                    </div>
                   </div>
                 </div>
               )
