@@ -3,6 +3,7 @@ import MeetingBlock from './MeetingBlock.jsx'
 
 import NowMarker from './NowMarker.jsx'
 
+
 const slotHeightPx = 48
 const startTimeMinutes = 8 * 60 // 8:00 AM
 const endTimeMinutes = 16 * 60 + 30 // 4:30 PM
@@ -89,16 +90,16 @@ function useMaxVisibleColumns() {
   return maxCols
 }
 
-function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expandedClumpIds = new Set()) {
-  if (!dayMeetings || dayMeetings.length === 0) return { events: [] }
+function layoutMeetingsForDay(dayMeetings, dayKey) {
+  if (!dayMeetings || dayMeetings.length === 0) return { events: [], maxConcurrent: 0 }
   const sorted = [...dayMeetings].sort((a, b) => {
     if (a.startMinutes !== b.startMinutes) return a.startMinutes - b.startMinutes
     return (b.endMinutes - b.startMinutes) - (a.endMinutes - a.startMinutes)
   })
   const laidOut = []
-  // const overflowChips = []
   let clumpStartIdx = 0
   let clumpMaxEnd = sorted[0].endMinutes
+  let maxConcurrentAcrossClumps = 0
   function assignColumnsForClump(startIdx, endIdx) {
     const clump = sorted.slice(startIdx, endIdx + 1)
     const columnEndTimes = []
@@ -118,14 +119,11 @@ function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expand
       eventColumnIndex.set(evt, placedColumn)
       maxConcurrent = Math.max(maxConcurrent, columnEndTimes.length)
     }
-    const clumpId = `clump-${dayKey}-${clumpStartMin}-${clumpEndMin}`
-    const isExpanded = expandedClumpIds.has(clumpId)
-    const visibleColumns = maxConcurrent || 1
     for (const evt of clump) {
       const colIdx = eventColumnIndex.get(evt) || 0
-      if (colIdx < visibleColumns) laidOut.push({ ...evt, __layout: { columnIndex: colIdx, columnCount: visibleColumns } })
+      laidOut.push({ ...evt, __layout: { columnIndex: colIdx, columnCount: maxConcurrent } })
     }
-    // Overflow disabled for simplicity in this mode
+    maxConcurrentAcrossClumps = Math.max(maxConcurrentAcrossClumps, maxConcurrent)
   }
   for (let i = 1; i < sorted.length; i++) {
     const evt = sorted[i]
@@ -133,7 +131,7 @@ function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expand
     else { assignColumnsForClump(clumpStartIdx, i - 1); clumpStartIdx = i; clumpMaxEnd = evt.endMinutes }
   }
   assignColumnsForClump(clumpStartIdx, sorted.length - 1)
-  return { events: laidOut }
+  return { events: laidOut, maxConcurrent: maxConcurrentAcrossClumps }
 }
 
 function getMonthPillClass(type) {
@@ -152,11 +150,6 @@ function getMonthPillClass(type) {
 export default function Calendar({ meetings = [], view = 'workweek', currentDateISO, onChangeDate }) {
   const slots = generateTimeSlots()
   const maxVisibleColumns = useMaxVisibleColumns()
-  const [expandedClumpIds, setExpandedClumpIds] = useState(new Set())
-
-  function toggleClumpExpansion(clumpId) {
-    setExpandedClumpIds((prev) => { const next = new Set(prev); if (next.has(clumpId)) next.delete(clumpId); else next.add(clumpId); return next })
-  }
 
   // Dates for the active view
   const todayISO = isoToday()
@@ -273,20 +266,31 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                 const legacyIndex = (d.date.getDay() + 6) % 7
                 return typeof mtg.dayIndex === 'number' && mtg.dayIndex === legacyIndex
               })
-              const { events: laidOut } = layoutMeetingsForDay(dayMeetings, d.iso, maxVisibleColumns, expandedClumpIds)
+              const { events: laidOut, maxConcurrent } = layoutMeetingsForDay(dayMeetings, d.iso)
               const isToday = d.iso === todayISO
+              const gridHeightPx = ((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx
+              const widthScale = Math.max(1, (maxConcurrent || 1) / (maxVisibleColumns || 1))
+              const extraCols = Math.max(0, (maxConcurrent || 0) - (maxVisibleColumns || 0))
 
               return (
                 <div key={d.key} className="relative">
                   {slots.map((m) => (<div key={m} className="border-b border-slate-100" style={{ height: `${slotHeightPx}px` }} />))}
-                  {isToday && nowTopPx >= 0 && nowTopPx <= ((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx && (
+                  {isToday && nowTopPx >= 0 && nowTopPx <= gridHeightPx && (
                     <NowMarker topPx={nowTopPx} />
                   )}
-                  <div className="absolute inset-x-0 top-0" style={{ height: `${((endTimeMinutes - startTimeMinutes) / 30 + 1) * slotHeightPx}px` }}>
-                    {laidOut.map((mtg) => (
-                      <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
-                    ))}
-                    
+                  {/* Horizontal overflow container for overlapping meetings */}
+                  <div className="absolute inset-x-0 top-0 overflow-x-auto relative" style={{ height: `${gridHeightPx}px` }}>
+                    <div className="relative" style={{ width: `${widthScale * 100}%`, height: `${gridHeightPx}px` }}>
+                      {laidOut.map((mtg) => (
+                        <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
+                      ))}
+                    </div>
+                    {/* +N more pill (shown when overflow exists) */}
+                    {extraCols > 0 && (
+                      <div className="absolute right-1.5 top-1.5 z-20">
+                        <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-800/80 text-white">+{extraCols} more</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )
