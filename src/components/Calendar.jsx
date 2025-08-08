@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import MeetingBlock from './MeetingBlock.jsx'
 
 import NowMarker from './NowMarker.jsx'
@@ -156,11 +156,11 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
   const slots = generateTimeSlots()
   const maxVisibleColumns = useMaxVisibleColumns()
   const [expandedClumpIds, setExpandedClumpIds] = useState(new Set())
-  const dayScrollRefs = useState(() => new Map())[0]
+  const dayScrollRefs = useRef({})
   const [scrollHints, setScrollHints] = useState({})
 
   function updateScrollHints(dayKey) {
-    const el = dayScrollRefs.get(dayKey)
+    const el = dayScrollRefs.current[dayKey]
     if (!el) return
     const canLeft = el.scrollLeft > 0
     const canRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
@@ -308,10 +308,10 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                     style={{ height: `${gridHeightPx}px` }}
                     ref={(el) => {
                       if (el) {
-                        dayScrollRefs.set(d.key, el)
+                        dayScrollRefs.current[d.key] = el
                         setTimeout(() => updateScrollHints(d.key), 0)
                       } else {
-                        dayScrollRefs.delete(d.key)
+                        delete dayScrollRefs.current[d.key]
                         setScrollHints((prev) => {
                           const { [d.key]: _omit, ...rest } = prev
                           return rest
@@ -344,7 +344,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                     <button
                       type="button"
                       className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-20 h-6 w-6 rounded-full bg-slate-800/70 text-white items-center justify-center hover:bg-slate-800"
-                      onClick={() => dayScrollRefs.get(d.key)?.scrollBy({ left: -160, behavior: 'smooth' })}
+                      onClick={() => dayScrollRefs.current[d.key]?.scrollBy({ left: -160, behavior: 'smooth' })}
                       aria-label="Scroll left"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -354,7 +354,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                     <button
                       type="button"
                       className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-20 h-6 w-6 rounded-full bg-slate-800/70 text-white items-center justify-center hover:bg-slate-800"
-                      onClick={() => dayScrollRefs.get(d.key)?.scrollBy({ left: 160, behavior: 'smooth' })}
+                      onClick={() => dayScrollRefs.current[d.key]?.scrollBy({ left: 160, behavior: 'smooth' })}
                       aria-label="Scroll right"
                     >
                       <ChevronRight className="h-4 w-4" />
