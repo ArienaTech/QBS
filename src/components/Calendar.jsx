@@ -56,7 +56,7 @@ function useMaxVisibleColumns() {
 }
 
 // Given a list of meetings for a single day, compute side-by-side columns for overlapping groups, capping visible columns
-function layoutMeetingsForDay(dayMeetings, maxVisibleColumns = 5) {
+function layoutMeetingsForDay(dayMeetings, dayIndex, maxVisibleColumns = 5, expandedClumpIds = new Set()) {
   if (!dayMeetings || dayMeetings.length === 0) return { events: [], overflow: [] }
 
   // Sort by start time, then by duration (longer first helps stable layout)
@@ -105,7 +105,10 @@ function layoutMeetingsForDay(dayMeetings, maxVisibleColumns = 5) {
       maxConcurrent = Math.max(maxConcurrent, columnEndTimes.length)
     }
 
-    const visibleColumns = Math.min(maxConcurrent || 1, maxVisibleColumns)
+    const clumpId = `clump-${dayIndex}-${clumpStartMin}-${clumpEndMin}`
+    const isExpanded = expandedClumpIds.has(clumpId)
+
+    const visibleColumns = isExpanded ? (maxConcurrent || 1) : Math.min(maxConcurrent || 1, maxVisibleColumns)
 
     // Push visible events with adjusted columnCount
     for (const evt of clump) {
@@ -121,17 +124,20 @@ function layoutMeetingsForDay(dayMeetings, maxVisibleColumns = 5) {
       }
     }
 
-    // Overflow chip if any hidden
-    const hiddenEvents = clump.filter((evt) => (eventColumnIndex.get(evt) || 0) >= visibleColumns)
-    const hiddenCount = hiddenEvents.length
-    if (hiddenCount > 0) {
-      overflowChips.push({
-        id: `overflow-${clumpStartMin}-${clumpEndMin}-${startIdx}`,
-        startMinutes: clumpStartMin,
-        endMinutes: clumpEndMin,
-        hiddenCount,
-        hiddenEvents,
-      })
+    // Overflow chip if any hidden and not expanded
+    if (!isExpanded) {
+      const hiddenEvents = clump.filter((evt) => (eventColumnIndex.get(evt) || 0) >= visibleColumns)
+      const hiddenCount = hiddenEvents.length
+      if (hiddenCount > 0) {
+        overflowChips.push({
+          id: `overflow-${dayIndex}-${clumpStartMin}-${clumpEndMin}`,
+          clumpId,
+          startMinutes: clumpStartMin,
+          endMinutes: clumpEndMin,
+          hiddenCount,
+          hiddenEvents,
+        })
+      }
     }
   }
 
@@ -158,6 +164,16 @@ function layoutMeetingsForDay(dayMeetings, maxVisibleColumns = 5) {
 export default function Calendar({ meetings = [] }) {
   const slots = generateTimeSlots()
   const maxVisibleColumns = useMaxVisibleColumns()
+  const [expandedClumpIds, setExpandedClumpIds] = useState(new Set())
+
+  function toggleClumpExpansion(clumpId) {
+    setExpandedClumpIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(clumpId)) next.delete(clumpId)
+      else next.add(clumpId)
+      return next
+    })
+  }
 
   return (
     <div className="w-full overflow-x-auto">
@@ -190,7 +206,7 @@ export default function Calendar({ meetings = [] }) {
           {/* Day columns */}
           {days.map((d, dayIndex) => {
             const dayMeetings = meetings.filter((mtg) => mtg.dayIndex === dayIndex)
-            const { events: laidOut, overflow } = layoutMeetingsForDay(dayMeetings, maxVisibleColumns)
+            const { events: laidOut, overflow } = layoutMeetingsForDay(dayMeetings, dayIndex, maxVisibleColumns, expandedClumpIds)
 
             return (
               <div key={d.key} className="relative">
@@ -214,12 +230,15 @@ export default function Calendar({ meetings = [] }) {
                   {overflow.map((of) => (
                     <OverflowChip
                       key={of.id}
+                      clumpId={of.clumpId}
                       startMinutes={of.startMinutes}
                       endMinutes={of.endMinutes}
                       hiddenCount={of.hiddenCount}
                       hiddenEvents={of.hiddenEvents}
                       slotHeightPx={slotHeightPx}
                       dayStartMinutes={startTimeMinutes}
+                      onToggleExpand={toggleClumpExpansion}
+                      isExpanded={expandedClumpIds.has(of.clumpId)}
                     />
                   ))}
                 </div>
