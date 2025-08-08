@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import MeetingBlock from './MeetingBlock.jsx'
 
 import NowMarker from './NowMarker.jsx'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 
 const slotHeightPx = 48
@@ -156,20 +155,6 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
   const slots = generateTimeSlots()
   const maxVisibleColumns = useMaxVisibleColumns()
   const [expandedClumpIds, setExpandedClumpIds] = useState(new Set())
-  const dayScrollRefs = useRef({})
-  const [scrollHints, setScrollHints] = useState({})
-
-  function updateScrollHints(dayKey) {
-    const el = dayScrollRefs.current[dayKey]
-    if (!el) return
-    const canLeft = el.scrollLeft > 0
-    const canRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
-    setScrollHints((prev) => {
-      const prevForDay = prev[dayKey] || {}
-      if (prevForDay.canLeft === canLeft && prevForDay.canRight === canRight) return prev
-      return { ...prev, [dayKey]: { canLeft, canRight } }
-    })
-  }
 
   function toggleClumpExpansion(clumpId) {
     setExpandedClumpIds((prev) => { const next = new Set(prev); if (next.has(clumpId)) next.delete(clumpId); else next.add(clumpId); return next })
@@ -303,23 +288,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                     <NowMarker topPx={nowTopPx} />
                   )}
                   {/* Horizontal overflow container for overlapping meetings */}
-                  <div
-                    className="absolute inset-x-0 top-0 overflow-x-auto"
-                    style={{ height: `${gridHeightPx}px` }}
-                    ref={(el) => {
-                      if (el) {
-                        dayScrollRefs.current[d.key] = el
-                        setTimeout(() => updateScrollHints(d.key), 0)
-                      } else {
-                        delete dayScrollRefs.current[d.key]
-                        setScrollHints((prev) => {
-                          const { [d.key]: _omit, ...rest } = prev
-                          return rest
-                        })
-                      }
-                    }}
-                    onScroll={() => updateScrollHints(d.key)}
-                  >
+                  <div className="absolute inset-x-0 top-0 overflow-x-auto" style={{ height: `${gridHeightPx}px` }}>
                     <div className="relative" style={{ width: `${widthScale * 100}%`, height: `${gridHeightPx}px` }}>
                       {laidOut.map((mtg) => (
                         <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
@@ -331,34 +300,6 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                     <div className="absolute right-1.5 top-1.5 z-20">
                       <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-800/80 text-white">+{extraCols} more</span>
                     </div>
-                  )}
-                  {/* Scroll hint gradients */}
-                  {widthScale > 1 && scrollHints[d.key]?.canLeft && (
-                    <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent" />
-                  )}
-                  {widthScale > 1 && scrollHints[d.key]?.canRight && (
-                    <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent" />
-                  )}
-                  {/* Arrow nudge buttons (hidden on small screens) */}
-                  {widthScale > 1 && scrollHints[d.key]?.canLeft && (
-                    <button
-                      type="button"
-                      className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-20 h-6 w-6 rounded-full bg-slate-800/70 text-white items-center justify-center hover:bg-slate-800"
-                      onClick={() => dayScrollRefs.current[d.key]?.scrollBy({ left: -160, behavior: 'smooth' })}
-                      aria-label="Scroll left"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                  )}
-                  {widthScale > 1 && scrollHints[d.key]?.canRight && (
-                    <button
-                      type="button"
-                      className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-20 h-6 w-6 rounded-full bg-slate-800/70 text-white items-center justify-center hover:bg-slate-800"
-                      onClick={() => dayScrollRefs.current[d.key]?.scrollBy({ left: 160, behavior: 'smooth' })}
-                      aria-label="Scroll right"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
                   )}
                 </div>
               )
