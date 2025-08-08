@@ -140,6 +140,19 @@ function layoutMeetingsForDay(dayMeetings, dayKey, maxVisibleColumns = 5, expand
   return { events: laidOut, overflow: overflowChips }
 }
 
+function getMonthPillClass(type) {
+  switch (type) {
+    case 'General':
+      return 'bg-blue-50 text-blue-800 border border-blue-200'
+    case 'Suspensions':
+      return 'bg-pink-50 text-pink-800 border border-pink-200'
+    case 'Reviews':
+      return 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+    default:
+      return 'bg-slate-100 text-slate-700 border border-slate-200'
+  }
+}
+
 export default function Calendar({ meetings = [], view = 'workweek', currentDateISO, onChangeDate }) {
   const slots = generateTimeSlots()
   const maxVisibleColumns = useMaxVisibleColumns()
@@ -210,7 +223,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                   <div className="absolute inset-x-1 top-5 bottom-1 overflow-auto">
                     <div className="space-y-0.5 pr-1">
                       {dayMeetings.map((m) => (
-                        <div key={m.id} className="truncate text-[11px] px-1 py-0.5 rounded bg-slate-100 text-slate-700">
+                        <div key={m.id} className={`${getMonthPillClass(m.type)} truncate text-[11px] px-1 py-0.5 rounded`}>
                           <span className="font-medium">{formatTimeLabel(m.startMinutes)}</span> {m.title}
                         </div>
                       ))}
