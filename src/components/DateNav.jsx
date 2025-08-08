@@ -91,6 +91,9 @@ export default function DateNav({ view, currentDateISO, onChange }) {
         <button type="button" onClick={goPrev} className="px-2 py-1.5 text-slate-700 hover:bg-slate-50" aria-label="Previous">
           <ChevronLeft className="h-4 w-4" />
         </button>
+        <button type="button" onClick={goToday} className="px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-50 border-x border-slate-300" aria-label="Jump to today">
+          Today
+        </button>
         <div className="px-3 py-1.5 text-sm font-medium text-slate-800 min-w-[12ch] text-center">
           {label}
         </div>
@@ -98,9 +101,6 @@ export default function DateNav({ view, currentDateISO, onChange }) {
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
-      <button type="button" onClick={goToday} className="px-2.5 py-1.5 text-sm rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-sm">
-        Today
-      </button>
     </div>
   )
 }
