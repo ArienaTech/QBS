@@ -17,10 +17,23 @@ export default function App() {
       const saved = localStorage.getItem('sidebarCollapsed')
       if (saved !== null) {
         setSidebarCollapsed(saved === 'true')
-        return
+      } else {
+        const prefersCollapsed = window.matchMedia('(max-width: 1024px)').matches
+        setSidebarCollapsed(prefersCollapsed)
       }
-      const prefersCollapsed = window.matchMedia('(max-width: 1024px)').matches
-      setSidebarCollapsed(prefersCollapsed)
+    } catch {}
+  }, [])
+
+  // Load meetings from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('meetings')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          setMeetings(parsed)
+        }
+      }
     } catch {}
   }, [])
 
@@ -30,6 +43,13 @@ export default function App() {
       localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed))
     } catch {}
   }, [sidebarCollapsed])
+
+  // Persist meetings whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('meetings', JSON.stringify(meetings))
+    } catch {}
+  }, [meetings])
 
   function handleAddMeetingClick() {
     setShowAdd(true)
