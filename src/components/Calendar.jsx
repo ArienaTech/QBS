@@ -279,19 +279,19 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
                     <NowMarker topPx={nowTopPx} />
                   )}
                   {/* Horizontal overflow container for overlapping meetings */}
-                  <div className="absolute inset-x-0 top-0 overflow-x-auto" style={{ height: `${gridHeightPx}px` }}>
+                  <div className="absolute inset-x-0 top-0 overflow-x-auto relative" style={{ height: `${gridHeightPx}px` }}>
                     <div className="relative" style={{ width: `${widthScale * 100}%`, height: `${gridHeightPx}px` }}>
                       {laidOut.map((mtg) => (
                         <MeetingBlock key={mtg.id} meeting={mtg} slotHeightPx={slotHeightPx} dayStartMinutes={startTimeMinutes} columnIndex={mtg.__layout?.columnIndex || 0} columnCount={mtg.__layout?.columnCount || 1} />
                       ))}
                     </div>
+                    {/* +N more pill (shown when overflow exists) */}
+                    {extraCols > 0 && (
+                      <div className="absolute right-1.5 top-1.5 z-20">
+                        <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-800/80 text-white">+{extraCols} more</span>
+                      </div>
+                    )}
                   </div>
-                  {/* +N more pill (shown when overflow exists) */}
-                  {extraCols > 0 && (
-                    <div className="absolute right-1.5 top-1.5 z-20">
-                      <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-800/80 text-white">+{extraCols} more</span>
-                    </div>
-                  )}
                 </div>
               )
             })}
