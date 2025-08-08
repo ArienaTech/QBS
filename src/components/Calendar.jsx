@@ -253,7 +253,7 @@ export default function Calendar({ meetings = [], view = 'workweek', currentDate
         </div>
 
         {/* Grid body (scrollable) */}
-        <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+        <div className="h-[65vh] overflow-y-auto">
           <div className="grid" style={{ gridTemplateColumns: `${timeGutterWidthPx}px repeat(${dayList.length}, minmax(0, 1fr))` }}>
             {/* Time gutter */}
             <div className="relative border-r border-slate-200">
